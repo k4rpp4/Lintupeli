@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 0
+    path: Assets/GPU_Swarm/Test/Test (Crawling).unity
+    guid: c8fafbf91d5d3fc499bdd8669a843d09
+  m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: af1236ba1e04712469ff6cd02a8cd408,
+      type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: e60f96c913ddd444890ad348ee8b1f49,
+      type: 2}
+  m_UseUCBPForAssetBundles: 0
