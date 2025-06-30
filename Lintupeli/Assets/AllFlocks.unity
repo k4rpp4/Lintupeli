@@ -625,6 +625,57 @@ MonoBehaviour:
   m_TrackingType: 0
   m_UpdateType: 0
   m_UseRelativeTransform: 0
+--- !u!1 &684089958
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 684089960}
+  - component: {fileID: 684089959}
+  m_Layer: 0
+  m_Name: CheckPointManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &684089959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 684089958}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 256d593c69bf31445b91457295348693, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gpuFlock: {fileID: 1147353164}
+  referenceTransform: {fileID: 670367403}
+  CheckpointPositions:
+  - {x: 0, y: 0, z: 40}
+  - {x: 0, y: 40, z: 0}
+  - {x: 40, y: 0, z: 0}
+  CheckpointRadius: 2.5
+--- !u!4 &684089960
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 684089958}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &744421048 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1274959629071194, guid: b6c9fe565aac792419d1d6e463362b48,
@@ -789,7 +840,7 @@ Transform:
   m_GameObject: {fileID: 911186236}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -1.6, z: 40}
+  m_LocalPosition: {x: 0, y: 0, z: 40}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1407,7 +1458,7 @@ MonoBehaviour:
   BoidMesh: {fileID: 4300000, guid: 8ec9bd4530b42b446938d365f3bba972, type: 3}
   BoidMaterial: {fileID: 2100000, guid: f79a98ae65808b84c850013a4d6937aa, type: 2}
   _AnimationClip: {fileID: 7400000, guid: 8ec9bd4530b42b446938d365f3bba972, type: 3}
-  UseAffectors: 1
+  UseAffectors: 0
   DrawingAffectors: {fileID: 4900000, guid: ccec4b6811b96fc4090ba47d4c7ebf9e, type: 3}
   UseMeshAffectors: 0
   MeshAffectors: {fileID: 4300004, guid: af7e508e07ae8d840a01c26f5bc95b0d, type: 3}
@@ -1893,3 +1944,4 @@ SceneRoots:
   - {fileID: 136984933}
   - {fileID: 1147353159}
   - {fileID: 1091712171}
+  - {fileID: 684089960}

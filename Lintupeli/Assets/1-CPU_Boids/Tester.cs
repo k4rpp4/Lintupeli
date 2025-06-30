@@ -7,7 +7,7 @@ public class Tester : MonoBehaviour
 
     void Start()
     {
-        controller = FindObjectOfType<BoidController>();
+        controller = FindAnyObjectByType<BoidController>();
     }
 
     void OnGUI()
