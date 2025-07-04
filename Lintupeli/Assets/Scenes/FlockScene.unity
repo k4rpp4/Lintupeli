@@ -160,6 +160,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 162244823}
+  - component: {fileID: 162244824}
   m_Layer: 0
   m_Name: FlockFollowPoint
   m_TagString: Untagged
@@ -182,6 +183,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1984128184}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &162244824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 162244822}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d89a37edf8f699d4cbf8eb9ab54a7d0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  minY: 5
 --- !u!1 &235447793
 GameObject:
   m_ObjectHideFlags: 0
@@ -367,6 +381,51 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -500, y: 0, z: -500}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &881159611
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 881159613}
+  - component: {fileID: 881159612}
+  m_Layer: 0
+  m_Name: CheckPointCreator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &881159612
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 881159611}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 122d639350badce41b1f94893dff581e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  minY: 1
+--- !u!4 &881159613
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 881159611}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -907,3 +966,4 @@ SceneRoots:
   - {fileID: 1875306820}
   - {fileID: 1922261332}
   - {fileID: 651745478}
+  - {fileID: 881159613}
