@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class FlockCheckpointController : MonoBehaviour
 {
@@ -22,23 +23,38 @@ public class FlockCheckpointController : MonoBehaviour
     [Header("Visuals")]
     public Material checkpointMaterial;
 
+    [Header("Callbacks")]
+    public UnityEvent OnAllCheckpointsCompleted;
+
     private List<Vector3> computedCheckpoints = new List<Vector3>();
     private int currentCheckpoint = 0;
 
     private GameObject activeCheckpointIndicator;
+    private bool completionEventFired = false;
 
     void Start()
     {
-        if (randomPathSource != null && randomPathSource.checkpoints != null && randomPathSource.checkpoints.Count > 0)
+        if (randomPathSource != null &&
+            randomPathSource.checkpoints != null &&
+            randomPathSource.checkpoints.Count > 0)
         {
             CheckpointPositions = new List<Vector3>(randomPathSource.checkpoints);
         }
+
+        currentCheckpoint = 0;
+        completionEventFired = false;
+
+        UpdateComputedCheckpoints();
 
         if (CheckpointPositions == null || CheckpointPositions.Count == 0)
             return;
 
         activeCheckpointIndicator = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         activeCheckpointIndicator.transform.localScale = Vector3.one * 1.5f;
+
+        var collider = activeCheckpointIndicator.GetComponent<Collider>();
+        if (collider != null)
+            Destroy(collider);
 
         if (checkpointMaterial != null)
         {
@@ -47,56 +63,43 @@ public class FlockCheckpointController : MonoBehaviour
         }
     }
 
-
     void Update()
     {
-        if (gpuFlock == null || referenceTransform == null || CheckpointPositions == null || CheckpointPositions.Count == 0)
+        if (gpuFlock == null ||
+            referenceTransform == null ||
+            computedCheckpoints == null ||
+            computedCheckpoints.Count == 0 ||
+            completionEventFired)
             return;
-
-        UpdateComputedCheckpoints();
 
         if (currentCheckpoint >= computedCheckpoints.Count)
-        {
-            if (activeCheckpointIndicator != null)
-                activeCheckpointIndicator.SetActive(false);
-
-            foreach (var arrow in arrowTransforms)
-            {
-                if (arrow != null)
-                    arrow.gameObject.SetActive(false);
-            }
             return;
-        }
 
         Vector3 currentTarget = computedCheckpoints[currentCheckpoint];
         float distance = Vector3.Distance(gpuFlock.FlockCenter, currentTarget);
 
-        // Move indicator
         if (activeCheckpointIndicator != null)
         {
             activeCheckpointIndicator.transform.position = currentTarget;
             activeCheckpointIndicator.SetActive(true);
         }
 
-        // Rotate all arrows
         foreach (var arrow in arrowTransforms)
         {
-            if (arrow != null)
-            {
-                Vector3 directionToTarget = currentTarget - arrow.position;
-                if (directionToTarget != Vector3.zero)
-                    arrow.rotation = Quaternion.LookRotation(directionToTarget);
-            }
+            if (arrow == null)
+                continue;
+
+            Vector3 directionToTarget = currentTarget - arrow.position;
+            if (directionToTarget.sqrMagnitude > 0.0001f)
+                arrow.rotation = Quaternion.LookRotation(directionToTarget, Vector3.up);
         }
 
         if (distance < CheckpointRadius)
         {
-            Debug.Log($"Flock reached checkpoint {currentCheckpoint} at {currentTarget}");
             currentCheckpoint++;
 
             if (currentCheckpoint >= computedCheckpoints.Count)
             {
-                Debug.Log("All checkpoints completed.");
                 if (activeCheckpointIndicator != null)
                     activeCheckpointIndicator.SetActive(false);
 
@@ -105,19 +108,9 @@ public class FlockCheckpointController : MonoBehaviour
                     if (arrow != null)
                         arrow.gameObject.SetActive(false);
                 }
-            }
-            else
-            {
-                Debug.Log($"Next checkpoint is {currentCheckpoint} at {computedCheckpoints[currentCheckpoint]}");
-            }
-        }
 
-        // Debug print every 500 frames
-        if (Time.frameCount % 500 == 0)
-        {
-            for (int i = 0; i < computedCheckpoints.Count; i++)
-            {
-                Debug.Log($"Checkpoint {i} world position: {computedCheckpoints[i]}");
+                completionEventFired = true;
+                OnAllCheckpointsCompleted?.Invoke();
             }
         }
     }
@@ -125,11 +118,14 @@ public class FlockCheckpointController : MonoBehaviour
     void UpdateComputedCheckpoints()
     {
         computedCheckpoints.Clear();
+
+        if (CheckpointPositions == null || referenceTransform == null)
+            return;
+
         foreach (var offset in CheckpointPositions)
         {
             Vector3 worldPos = referenceTransform.position + offset;
 
-            // Clamp to minimum height
             if (worldPos.y < minHeight)
                 worldPos.y = minHeight;
 
@@ -142,17 +138,25 @@ public class FlockCheckpointController : MonoBehaviour
         if (referenceTransform == null || CheckpointPositions == null)
             return;
 
-        UpdateComputedCheckpoints();
+        List<Vector3> gizmoCheckpoints = new List<Vector3>();
+
+        foreach (var offset in CheckpointPositions)
+        {
+            Vector3 worldPos = referenceTransform.position + offset;
+            if (worldPos.y < minHeight)
+                worldPos.y = minHeight;
+
+            gizmoCheckpoints.Add(worldPos);
+        }
 
         Gizmos.color = Color.green;
-        for (int i = 0; i < computedCheckpoints.Count; i++)
-        {
-            Gizmos.DrawWireSphere(computedCheckpoints[i], CheckpointRadius);
 
-            if (i < computedCheckpoints.Count - 1)
-            {
-                Gizmos.DrawLine(computedCheckpoints[i], computedCheckpoints[i + 1]);
-            }
+        for (int i = 0; i < gizmoCheckpoints.Count; i++)
+        {
+            Gizmos.DrawWireSphere(gizmoCheckpoints[i], CheckpointRadius);
+
+            if (i < gizmoCheckpoints.Count - 1)
+                Gizmos.DrawLine(gizmoCheckpoints[i], gizmoCheckpoints[i + 1]);
         }
     }
 }
