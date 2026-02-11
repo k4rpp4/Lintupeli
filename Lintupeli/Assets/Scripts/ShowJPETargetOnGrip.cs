@@ -1,39 +1,28 @@
-using UnityEngine;
-using UnityEngine.InputSystem;
+Ôªøusing UnityEngine;
 
 public class ShowJPETargetOnGrip : MonoBehaviour
 {
     [Header("References")]
-    public Transform headTransform;     // XR Main Camera
-    public GameObject jpeTarget;        // JPE_target GameObject
+    public Transform headTransform;
+    public GameObject jpeTarget;
+    public JPE_TestManager jpeTestManager;
 
     [Header("Settings")]
-    public float distanceFromHead = 0.9f; // 90 cm
-
-    [Header("Input")]
-    public InputActionProperty gripAction;
-
-    void OnEnable()
-    {
-        gripAction.action.Enable();
-    }
-
-    void OnDisable()
-    {
-        gripAction.action.Disable();
-    }
+    public float distanceFromHead = 0.9f;
 
     void Update()
     {
-        if (gripAction.action.WasPressedThisFrame())
+        bool leftGrip = OVRInput.GetDown(OVRInput.Button.PrimaryHandTrigger);
+        bool rightGrip = OVRInput.GetDown(OVRInput.Button.SecondaryHandTrigger);
+
+        if (leftGrip || rightGrip)
         {
-            PlaceTarget();
+            PlaceTargetAndSaveNeutral();
         }
     }
 
-    void PlaceTarget()
+    void PlaceTargetAndSaveNeutral()
     {
-        // K‰ytet‰‰n katseen suuntaa, mutta pidet‰‰n horisontti
         Vector3 forward = headTransform.forward;
         forward.y = 0f;
         forward.Normalize();
@@ -43,10 +32,18 @@ public class ShowJPETargetOnGrip : MonoBehaviour
 
         jpeTarget.transform.position = targetPosition;
 
-        // K‰‰nn‰ taulu kohti k‰ytt‰j‰n p‰‰t‰
         jpeTarget.transform.rotation =
-            Quaternion.LookRotation(jpeTarget.transform.position - headTransform.position);
+            Quaternion.LookRotation(targetPosition - headTransform.position);
 
         jpeTarget.SetActive(true);
+
+        // üîπ OIKEIN kutsuttu metodi
+        if (jpeTestManager != null)
+        {
+            jpeTestManager.SaveNeutral(
+                headTransform.position,
+                headTransform.forward
+            );
+        }
     }
 }
