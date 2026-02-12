@@ -1,36 +1,51 @@
 ﻿using UnityEngine;
+using UnityEngine.Events;
 using TMPro;
+using UnityEngine.UI;
 
 public class JPE_TestManager : MonoBehaviour
 {
     [Header("References")]
     public Transform headTransform;
-    public TMP_Text instructionText;
-    public TMP_Text resultText;
-    public TMP_Text gripPushText;
+    public GameObject jpeTargetPrefab;
+    public Transform jpeTargetsParent;
+    public TMP_Text instructions;
+    private TMP_Text resultText;
+    public GameObject buttonPanelPrefab;
+    private GameObject currentButtonPanel;
 
     [Header("Settings")]
     public float distanceFromHead = 0.9f;
+    public int maxTargets = 3;
 
-    private Vector3 neutralPoint;
-    private Vector3 extremePoint;
+    private Vector3 startForward;
+    private Vector3 extremeForward;
+    private Vector3 endForward;
 
-    private bool neutralSet = false;
+    public string firstInstruction;
+    public string secondInstruction;
+    public string thirdInstruction;
 
-    private int gripPushCount = 0;
+    [Header("External Exit Actions")]
+    public UnityEvent onExitTest;
+    public UnityEvent onRestartTest;
 
-    private enum TestState
+    private bool testComplete = false;
+    private readonly string[] pointNames =
     {
-        Inactive,
-        WaitingForExtreme,
-        WaitingForReturn
+        "Aloituspiste",
+        "Ääripiste",
+        "Lopetuspiste"
+    };
+
+        void Start()
+    {
+        UpdateInstructionText(0);
     }
 
-    private TestState currentState = TestState.Inactive;
-
-    void Update()
+        void Update()
     {
-        if (currentState == TestState.Inactive)
+        if (testComplete)
             return;
 
         bool leftGrip = OVRInput.GetDown(OVRInput.Button.PrimaryHandTrigger);
@@ -38,95 +53,205 @@ public class JPE_TestManager : MonoBehaviour
 
         if (leftGrip || rightGrip)
         {
-            HandleGrip();
-            gripPushCount++;
-            gripPushText.text = gripPushCount.ToString();
+            SpawnTargetIfAllowed();
         }
     }
 
-    // 🔹 Neutraali tallennetaan target-vaiheessa
-    public void SaveNeutral(Vector3 headPosition, Vector3 forwardDirection)
+    void SpawnTargetIfAllowed()
     {
-        forwardDirection.y = 0f;
-        forwardDirection.Normalize();
+        int index = jpeTargetsParent.childCount;
 
-        neutralPoint =
-            headPosition + forwardDirection * distanceFromHead;
-
-        neutralSet = true;
-
-        if (instructionText != null)
-            instructionText.text = "Neutraali tallennettu. Voit aloittaa testin.";
-    }
-
-    // 🔹 Käynnistetään testin aloitusnapista
-    public void StartTest()
-    {
-        if (!neutralSet)
-        {
-            instructionText.text = "Aseta ensin neutraaliasento.";
+        if (index >= maxTargets)
             return;
-        }
 
-        resultText.text = "";
+        UpdateInstructionText(index);
+        SpawnTarget(index);
 
-        instructionText.text =
-            "Käännä pää ääriasentoon.\n\n" +
-            "Paina Grip tallentaaksesi ääriasennon.\n\n"
-            + neutralPoint.ToString();
-
-        currentState = TestState.WaitingForExtreme;
     }
 
-    void HandleGrip()
+    void SpawnTarget(int index)
     {
-        switch (currentState)
+        Vector3 forward = headTransform.forward.normalized;
+
+        Vector3 targetPosition =
+            headTransform.position + forward * distanceFromHead;
+
+        Quaternion targetRotation =
+            Quaternion.LookRotation(forward);
+
+        GameObject newTarget =
+            Instantiate(jpeTargetPrefab, targetPosition, targetRotation, jpeTargetsParent);
+
+        newTarget.name = pointNames[index];
+
+        TMP_Text textComponent =
+            newTarget.GetComponentInChildren<TMP_Text>();
+
+        if (textComponent != null)
         {
-            case TestState.WaitingForExtreme:
-                SaveExtreme();
-                instructionText.text =
-                    "Palauta pää lähtöasentoon.\n\n" +
-                    "Paina Grip mitataksesi virheen.\n\n" +
-                    extremePoint.ToString();
-                currentState = TestState.WaitingForReturn;
-                break;
-
-            case TestState.WaitingForReturn:
-                MeasureReturn();
-                currentState = TestState.Inactive;
-                break;
+            textComponent.text =
+                pointNames[index] + "\n\nDir:\n" +
+                forward.ToString("F3");
         }
+
+        // 🔹 FORCE INVISIBLE WHEN CREATED
+        JPETargetVisual visual =
+            newTarget.GetComponent<JPETargetVisual>();
+
+        if (visual != null)
+            visual.SetVisible(false);
+
+        // Store direction
+        if (index == 0)
+            startForward = forward;
+
+        if (index == 1)
+            extremeForward = forward;
+
+        if (index == 2)
+        {
+            endForward = forward;
+
+            RevealAllTargets();
+            CalculateJPEAngle();
+
+            instructions.text = "";
+
+            testComplete = true;
+        }
+
     }
 
-    void SaveExtreme()
+
+    void CalculateJPEAngle()
     {
-        Vector3 forward = headTransform.forward;
-        forward.y = 0f;
-        forward.Normalize();
+        if (resultText == null)
+            return;
 
-        extremePoint =
-            headTransform.position + forward * distanceFromHead;
-    }
-
-    void MeasureReturn()
-    {
-        Vector3 forward = headTransform.forward;
-        forward.y = 0f;
-        forward.Normalize();
-
-        Vector3 currentPoint =
-            headTransform.position + forward * distanceFromHead;
-
-        float errorDistance =
-            Vector3.Distance(neutralPoint, currentPoint);
-
-        float angleDeg =
-            Mathf.Atan(errorDistance / distanceFromHead) * Mathf.Rad2Deg;
+        float angle = Vector3.Angle(startForward, endForward);
 
         resultText.text =
-            "JPE-virhe: " + angleDeg.ToString("F2") + "°";
-
-        instructionText.text =
-            "Testi valmis.\n\nVoit tehdä uuden mittauksen.";
+            "JPE-virhe: " + angle.ToString("F2") + "°";
     }
+
+    void RevealAllTargets()
+    {
+        Transform startPoint = null;
+
+        foreach (Transform child in jpeTargetsParent)
+        {
+            JPETargetVisual visual =
+                child.GetComponent<JPETargetVisual>();
+
+            if (visual != null)
+                visual.SetVisible(true);
+
+            if (child.name == "Aloituspiste")
+                startPoint = child;
+        }
+
+        if (startPoint != null)
+            SpawnButtonPanel(startPoint);
+    }
+
+    void SpawnButtonPanel(Transform startPoint)
+    {
+        if (currentButtonPanel != null)
+            Destroy(currentButtonPanel);
+
+        Vector3 offset = new Vector3(0f, -0.5f, 0f);
+
+        currentButtonPanel = Instantiate(
+            buttonPanelPrefab,
+            startPoint.position + offset,
+            startPoint.rotation
+        );
+
+        currentButtonPanel.transform.SetParent(startPoint);
+
+        // 🔹 GET RESULT TEXT FROM PANEL VIA SCRIPT
+        JPETestMenuUI ui =
+            currentButtonPanel.GetComponent<JPETestMenuUI>();
+
+        if (ui != null)
+            resultText = ui.resultText;
+
+        // 🔹 Wire buttons
+        Button[] buttons =
+            currentButtonPanel.GetComponentsInChildren<Button>();
+
+        foreach (Button btn in buttons)
+        {
+            btn.onClick.RemoveAllListeners();
+
+            if (btn.name.Contains("Restart"))
+                btn.onClick.AddListener(RestartTest);
+
+            if (btn.name.Contains("Exit"))
+                btn.onClick.AddListener(ExitTest);
+        }
+    }
+
+
+
+
+    public void RestartTest()
+    {
+        for (int i = jpeTargetsParent.childCount - 1; i >= 0; i--)
+        {
+            Destroy(jpeTargetsParent.GetChild(i).gameObject);
+        }
+
+        if (currentButtonPanel != null)
+            Destroy(currentButtonPanel);
+
+        if (resultText != null)
+            resultText.text = "";
+
+        if (onRestartTest != null)
+            onRestartTest.Invoke();
+
+        startForward = Vector3.zero;
+        extremeForward = Vector3.zero;
+        endForward = Vector3.zero;
+
+        testComplete = false;
+
+        if (instructions != null)
+            instructions.text = firstInstruction;
+    }
+
+    public void ExitTest()
+    {
+        RestartTest();
+
+        if (onExitTest != null)
+            onExitTest.Invoke();
+    }
+
+    void UpdateInstructionText(int index)
+    {
+        if (instructions == null)
+            return;
+
+        switch (index)
+        {
+            case 0:
+                instructions.text = secondInstruction;
+                break;
+
+            case 1:
+                instructions.text = thirdInstruction;
+                break;
+
+            case 2:
+                instructions.text = "";
+                break;
+
+            default:
+                instructions.text = "";
+                break;
+        }
+    }
+
 }

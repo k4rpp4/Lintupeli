@@ -2,12 +2,8 @@
 
 public class ShowJPETargetOnGrip : MonoBehaviour
 {
-    [Header("References")]
     public Transform headTransform;
     public GameObject jpeTarget;
-    public JPE_TestManager jpeTestManager;
-
-    [Header("Settings")]
     public float distanceFromHead = 0.9f;
 
     void Update()
@@ -17,14 +13,13 @@ public class ShowJPETargetOnGrip : MonoBehaviour
 
         if (leftGrip || rightGrip)
         {
-            PlaceTargetAndSaveNeutral();
+            PlaceTarget();
         }
     }
 
-    void PlaceTargetAndSaveNeutral()
+    void PlaceTarget()
     {
         Vector3 forward = headTransform.forward;
-        forward.y = 0f;
         forward.Normalize();
 
         Vector3 targetPosition =
@@ -36,14 +31,5 @@ public class ShowJPETargetOnGrip : MonoBehaviour
             Quaternion.LookRotation(targetPosition - headTransform.position);
 
         jpeTarget.SetActive(true);
-
-        // 🔹 OIKEIN kutsuttu metodi
-        if (jpeTestManager != null)
-        {
-            jpeTestManager.SaveNeutral(
-                headTransform.position,
-                headTransform.forward
-            );
-        }
     }
 }
