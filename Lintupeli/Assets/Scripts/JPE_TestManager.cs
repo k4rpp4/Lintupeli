@@ -22,6 +22,8 @@ public class JPE_TestManager : MonoBehaviour
     private Vector3 extremeForward;
     private Vector3 endForward;
 
+    private int index = 0;
+
     public string firstInstruction;
     public string secondInstruction;
     public string thirdInstruction;
@@ -37,11 +39,6 @@ public class JPE_TestManager : MonoBehaviour
         "Ääripiste",
         "Lopetuspiste"
     };
-
-        void Start()
-    {
-        UpdateInstructionText(0);
-    }
 
         void Update()
     {
@@ -59,15 +56,14 @@ public class JPE_TestManager : MonoBehaviour
 
     void SpawnTargetIfAllowed()
     {
-        int index = jpeTargetsParent.childCount;
-
         if (index >= maxTargets)
             return;
 
-        UpdateInstructionText(index);
         SpawnTarget(index);
-
+        index++;
+        UpdateInstructionText(index);
     }
+
 
     void SpawnTarget(int index)
     {
@@ -197,6 +193,7 @@ public class JPE_TestManager : MonoBehaviour
 
     public void RestartTest()
     {
+        instructions.text = firstInstruction;
         for (int i = jpeTargetsParent.childCount - 1; i >= 0; i--)
         {
             Destroy(jpeTargetsParent.GetChild(i).gameObject);
@@ -219,6 +216,7 @@ public class JPE_TestManager : MonoBehaviour
 
         if (instructions != null)
             instructions.text = firstInstruction;
+        index = 0;
     }
 
     public void ExitTest()
@@ -237,15 +235,15 @@ public class JPE_TestManager : MonoBehaviour
         switch (index)
         {
             case 0:
-                instructions.text = secondInstruction;
+                instructions.text = firstInstruction;
                 break;
 
             case 1:
-                instructions.text = thirdInstruction;
+                instructions.text = secondInstruction;
                 break;
 
             case 2:
-                instructions.text = "";
+                instructions.text = thirdInstruction;
                 break;
 
             default:

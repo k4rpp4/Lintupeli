@@ -18621,11 +18621,11 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Paina peliohjaimen k\xE4mmenpainiketta (Grip), kun p\xE4\xE4si on neutraalissa
-    asennossa.\nT\xE4m\xE4 m\xE4\xE4ritt\xE4\xE4 l\xE4ht\xF6asennon.\n\nVoit tarvittaessa
-    korjata l\xE4ht\xF6asentoa painamalla k\xE4mmenpainiketta (Grip) uudelleen.\n\nKun
-    olet valmis aloittamaan testin, paina Aloita JPE-testi.\nN\xE4k\xF6kentt\xE4si
-    muuttuu mustaksi ja saat lis\xE4ohjeet testin suorittamiseen."
+  m_text: "Testiss\xE4 k\xE4ytet\xE4\xE4n peliohjaimen k\xE4mmenpainiketta (Grip).\nGrip-painike
+    sijaitsee ohjaimen kahvan sis\xE4puolella,\nsiin\xE4 kohdassa johon keskisormi
+    asettuu.\n\nJokaisessa vaiheessa paina Grip-painiketta\ntallentaaksesi senhetkisen
+    p\xE4\xE4n asennon.\n\nPaina Aloita JPE-testi, kun olet valmis.\nN\xE4k\xF6kentt\xE4
+    pimenee ja saat ohjeet testin suorittamiseen."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -18652,8 +18652,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 28
-  m_fontSizeBase: 28
+  m_fontSize: 24
+  m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
