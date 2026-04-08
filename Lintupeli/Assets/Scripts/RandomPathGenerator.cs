@@ -5,6 +5,7 @@ public class RandomPathGenerator : MonoBehaviour
 {
     public int distance = 40;
     public int checkpointsAmount = 10;
+    public float minHeight = 5f;
     public List<Vector3> checkpoints;
 
     void Start()
@@ -31,7 +32,7 @@ public class RandomPathGenerator : MonoBehaviour
                 point = randomDir * distance;
                 Debug.Log(point.y);
             }
-            while (point.y < 5);
+            while (point.y < minHeight);
             checkpoints.Add(point);
         }
     }

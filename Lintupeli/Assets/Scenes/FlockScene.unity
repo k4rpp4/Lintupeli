@@ -483,7 +483,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cameraTransform: {fileID: 417015903}
   followDistance: 40
-  minHeight: 5
+  minHeight: -45
   smoothSpeed: 5
 --- !u!1 &235447793
 GameObject:
@@ -3607,12 +3607,12 @@ PrefabInstance:
     - target: {fileID: 3109649095431264732, guid: d4ea6a0a3bc325444a4f332171438fcd,
         type: 3}
       propertyPath: _size.x
-      value: 1600
+      value: 800
       objectReference: {fileID: 0}
     - target: {fileID: 3109649095431264732, guid: d4ea6a0a3bc325444a4f332171438fcd,
         type: 3}
       propertyPath: _size.y
-      value: 900
+      value: 450
       objectReference: {fileID: 0}
     - target: {fileID: 3117826091703962783, guid: d4ea6a0a3bc325444a4f332171438fcd,
         type: 3}
@@ -9106,7 +9106,7 @@ Transform:
   m_GameObject: {fileID: 651745475}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -500, y: 0, z: -500}
+  m_LocalPosition: {x: -500, y: -50, z: -500}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11318,7 +11318,7 @@ PrefabInstance:
     - target: {fileID: 3109649095431264732, guid: d4ea6a0a3bc325444a4f332171438fcd,
         type: 3}
       propertyPath: _size.y
-      value: 450
+      value: 600
       objectReference: {fileID: 0}
     - target: {fileID: 3117826091703962783, guid: d4ea6a0a3bc325444a4f332171438fcd,
         type: 3}
@@ -16748,6 +16748,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   distance: 40
   checkpointsAmount: 10
+  minHeight: -45
   checkpoints: []
 --- !u!4 &881159613
 Transform:
@@ -19135,7 +19136,7 @@ MonoBehaviour:
   - {fileID: 880049244}
   CheckpointPositions: []
   CheckpointRadius: 4
-  minHeight: 5
+  minHeight: -50
   randomPathSource: {fileID: 881159612}
   checkpointMaterial: {fileID: 2100000, guid: 38b6a6ac074f60249a5205ea197b3606, type: 2}
   OnAllCheckpointsCompleted:
