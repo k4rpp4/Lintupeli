@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Events;
 using TMPro;
 using UnityEngine.UI;
@@ -17,12 +18,16 @@ public class JPE_TestManager : MonoBehaviour
     [Header("Settings")]
     public float distanceFromHead = 0.9f;
     public int maxTargets = 3;
+    public int totalTrials = 5;
 
-    private Vector3 startForward;
-    private Vector3 extremeForward;
-    private Vector3 endForward;
+    private Vector3 wallOrigin;
+    private Vector3 wallNormal;
+    private Vector3 startMarkerPosition;
+    private Vector3 endMarkerPosition;
 
     private int index = 0;
+    private int currentTrial = 0;
+    private List<float> trialResults = new List<float>();
 
     public string firstInstruction;
     public string secondInstruction;
@@ -68,12 +73,21 @@ public class JPE_TestManager : MonoBehaviour
     void SpawnTarget(int index)
     {
         Vector3 forward = headTransform.forward.normalized;
+        Vector3 targetPosition;
 
-        Vector3 targetPosition =
-            headTransform.position + forward * distanceFromHead;
+        if (index == 0)
+        {
+            wallNormal = forward;
+            targetPosition = headTransform.position + forward * distanceFromHead;
+            wallOrigin = targetPosition;
+            startMarkerPosition = targetPosition;
+        }
+        else
+        {
+            targetPosition = ProjectOntoWall(forward);
+        }
 
-        Quaternion targetRotation =
-            Quaternion.LookRotation(forward);
+        Quaternion targetRotation = Quaternion.LookRotation(wallNormal);
 
         GameObject newTarget =
             Instantiate(jpeTargetPrefab, targetPosition, targetRotation, jpeTargetsParent);
@@ -85,49 +99,66 @@ public class JPE_TestManager : MonoBehaviour
 
         if (textComponent != null)
         {
-            textComponent.text =
-                pointNames[index] + "\n\nDir:\n" +
-                forward.ToString("F3");
+            if (index == 0)
+            {
+                textComponent.text = pointNames[index];
+            }
+            else
+            {
+                float distCm = Vector3.Distance(startMarkerPosition, targetPosition) * 100f;
+                textComponent.text = pointNames[index] + "\n" + distCm.ToString("F1") + " cm";
+            }
         }
 
-        // 🔹 FORCE INVISIBLE WHEN CREATED
         JPETargetVisual visual =
             newTarget.GetComponent<JPETargetVisual>();
 
         if (visual != null)
             visual.SetVisible(false);
 
-        // Store direction
-        if (index == 0)
-            startForward = forward;
-
-        if (index == 1)
-            extremeForward = forward;
-
         if (index == 2)
         {
-            endForward = forward;
+            endMarkerPosition = targetPosition;
+            currentTrial++;
 
             RevealAllTargets();
-            CalculateJPEAngle();
+            CalculateJPEDistance();
 
             instructions.text = "";
 
             testComplete = true;
         }
-
     }
 
-
-    void CalculateJPEAngle()
+    Vector3 ProjectOntoWall(Vector3 rayDir)
     {
+        float denom = Vector3.Dot(rayDir, wallNormal);
+        if (Mathf.Abs(denom) < 0.0001f)
+            return wallOrigin;
+        float t = Vector3.Dot(wallOrigin - headTransform.position, wallNormal) / denom;
+        return headTransform.position + rayDir * t;
+    }
+
+    void CalculateJPEDistance()
+    {
+        float distanceCm = Vector3.Distance(startMarkerPosition, endMarkerPosition) * 100f;
+        trialResults.Add(distanceCm);
+
         if (resultText == null)
             return;
 
-        float angle = Vector3.Angle(startForward, endForward);
+        string text = "Kierros " + currentTrial + "/" + totalTrials +
+                      "\nJPE-virhe: " + distanceCm.ToString("F1") + " cm";
 
-        resultText.text =
-            "JPE-virhe: " + angle.ToString("F2") + "°";
+        if (currentTrial >= totalTrials)
+        {
+            float sum = 0f;
+            foreach (float r in trialResults) sum += r;
+            float average = sum / trialResults.Count;
+            text += "\n\nKeskiarvo: " + average.ToString("F1") + " cm";
+        }
+
+        resultText.text = text;
     }
 
     void RevealAllTargets()
@@ -160,7 +191,7 @@ public class JPE_TestManager : MonoBehaviour
         currentButtonPanel = Instantiate(
             buttonPanelPrefab,
             startPoint.position + offset,
-            startPoint.rotation
+            Quaternion.LookRotation(wallNormal)
         );
 
         currentButtonPanel.transform.SetParent(startPoint);
@@ -181,7 +212,18 @@ public class JPE_TestManager : MonoBehaviour
             btn.onClick.RemoveAllListeners();
 
             if (btn.name.Contains("Restart"))
-                btn.onClick.AddListener(RestartTest);
+            {
+                if (currentTrial < totalTrials)
+                {
+                    btn.onClick.AddListener(NextTrial);
+                    TMP_Text btnLabel = btn.GetComponentInChildren<TMP_Text>();
+                    if (btnLabel != null) btnLabel.text = "Seuraava";
+                }
+                else
+                {
+                    btn.onClick.AddListener(RestartTest);
+                }
+            }
 
             if (btn.name.Contains("Exit"))
                 btn.onClick.AddListener(ExitTest);
@@ -191,32 +233,45 @@ public class JPE_TestManager : MonoBehaviour
 
 
 
-    public void RestartTest()
+    void ClearMarkers()
     {
-        instructions.text = firstInstruction;
         for (int i = jpeTargetsParent.childCount - 1; i >= 0; i--)
-        {
             Destroy(jpeTargetsParent.GetChild(i).gameObject);
-        }
 
         if (currentButtonPanel != null)
             Destroy(currentButtonPanel);
 
-        if (resultText != null)
-            resultText.text = "";
+        resultText = null;
+
+        wallOrigin = Vector3.zero;
+        wallNormal = Vector3.zero;
+        startMarkerPosition = Vector3.zero;
+        endMarkerPosition = Vector3.zero;
+
+        testComplete = false;
+        index = 0;
+    }
+
+    void NextTrial()
+    {
+        ClearMarkers();
+
+        if (instructions != null)
+            instructions.text = firstInstruction;
+    }
+
+    public void RestartTest()
+    {
+        ClearMarkers();
+
+        currentTrial = 0;
+        trialResults.Clear();
 
         if (onRestartTest != null)
             onRestartTest.Invoke();
 
-        startForward = Vector3.zero;
-        extremeForward = Vector3.zero;
-        endForward = Vector3.zero;
-
-        testComplete = false;
-
         if (instructions != null)
             instructions.text = firstInstruction;
-        index = 0;
     }
 
     public void ExitTest()
