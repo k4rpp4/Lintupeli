@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -27,6 +28,7 @@ public class FlockCheckpointController : MonoBehaviour
     public UnityEvent OnAllCheckpointsCompleted;
 
     private List<Vector3> computedCheckpoints = new List<Vector3>();
+    public IReadOnlyList<Vector3> ComputedCheckpoints => computedCheckpoints;
     private int currentCheckpoint = 0;
 
     private GameObject activeCheckpointIndicator;
@@ -130,6 +132,40 @@ public class FlockCheckpointController : MonoBehaviour
                 worldPos.y = minHeight;
 
             computedCheckpoints.Add(worldPos);
+        }
+    }
+
+    [System.Serializable]
+    private class CheckpointData
+    {
+        public List<Vector3> positions;
+    }
+
+    public string saveFileName = "checkpoints.json";
+
+    [ContextMenu("Save Checkpoints")]
+    public void SaveCheckpoints()
+    {
+        string path = Path.Combine(Application.persistentDataPath, saveFileName);
+        var data = new CheckpointData { positions = CheckpointPositions };
+        File.WriteAllText(path, JsonUtility.ToJson(data, true));
+        Debug.Log("Checkpoints saved to: " + path);
+    }
+
+    [ContextMenu("Load Checkpoints")]
+    public void LoadCheckpoints()
+    {
+        string path = Path.Combine(Application.persistentDataPath, saveFileName);
+        if (!File.Exists(path))
+        {
+            Debug.LogWarning("No checkpoint file found at: " + path);
+            return;
+        }
+        var data = JsonUtility.FromJson<CheckpointData>(File.ReadAllText(path));
+        if (data != null)
+        {
+            CheckpointPositions = data.positions;
+            UpdateComputedCheckpoints();
         }
     }
 

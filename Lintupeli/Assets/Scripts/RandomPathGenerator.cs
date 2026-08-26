@@ -10,7 +10,7 @@ public class RandomPathGenerator : MonoBehaviour
     public float maxVerticalOffset = 20f;
     public List<Vector3> checkpoints;
 
-    void Start()
+    void Awake()
     {
         GenerateRandomVectors();
     }
