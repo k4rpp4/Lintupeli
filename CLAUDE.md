@@ -26,8 +26,10 @@ The Unity project lives in `Lintupeli/` (subdirectory). All gameplay code is und
 - **`Boid.compute`** — HLSL compute shader implementing separation, alignment, cohesion, noise, and affector forces per boid per frame.
 - **`FlockVRGuide.cs`** — Moves `GPUFlock.Target` to a point ahead of the headset each frame, with configurable horizontal/vertical offset angles.
 - **`FlockFollowPointController.cs`** — Simpler alternative: smoothly lerps a point ahead of the camera.
-- **`FlockCheckpointController.cs`** — Drives the flock through an ordered list of world-space checkpoints; fires `OnAllCheckpointsCompleted` when done. Checkpoints can be set manually or sourced from `RandomPathGenerator`.
+- **`FlockCheckpointController.cs`** — Drives the flock through an ordered list of world-space checkpoints; fires `OnAllCheckpointsCompleted` when done. Checkpoints can be set manually or sourced from `RandomPathGenerator`. Exposes `ComputedCheckpoints` (world-space, read-only) and can save/load the checkpoint offset list to/from a JSON file in `Application.persistentDataPath` (`SaveCheckpoints()` / `LoadCheckpoints()`, filename via `saveFileName`).
 - **`RandomPathGenerator.cs`** — Generates random spherical waypoints at a fixed radius (y ≥ 5) on `Start()`.
+- **`SavedGameMenuController.cs`** — Save-slot browser UI: lists `*.json` checkpoint saves from `Application.persistentDataPath`, paginated 6 per page. Selecting a slot then pressing Load sets `FlockCheckpointController.saveFileName` and calls `LoadCheckpoints()`, then re-spawns review markers if the review display is active.
+- **`CheckpointReviewDisplay.cs`** — Spawns a numbered marker (`CheckPointReview.prefab`) at each of `FlockCheckpointController.ComputedCheckpoints`; markers billboard to face `headTransform` every frame. Markers are cleared on disable.
 
 ### JPE Test System
 - **`JPE_TestManager.cs`** — Orchestrates the test. Listens for OVR grip presses (`OVRInput.Button.PrimaryHandTrigger` / `SecondaryHandTrigger`) to record up to 3 head-direction snapshots. After the third, calls `CalculateJPEAngle()` (`Vector3.Angle(startForward, endForward)`) and displays the error in degrees. Spawns a button panel for Restart/Exit.
