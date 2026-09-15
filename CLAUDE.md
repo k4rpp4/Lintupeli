@@ -32,7 +32,7 @@ The Unity project lives in `Lintupeli/` (subdirectory). All gameplay code is und
 - **`CheckpointReviewDisplay.cs`** — Spawns a numbered marker (`CheckPointReview.prefab`) at each of `FlockCheckpointController.ComputedCheckpoints`; markers billboard to face `headTransform` every frame. Markers are cleared on disable.
 
 ### JPE Test System
-- **`JPE_TestManager.cs`** — Orchestrates the test. Listens for OVR grip presses (`OVRInput.Button.PrimaryHandTrigger` / `SecondaryHandTrigger`) to record up to 3 head-direction snapshots. After the third, calls `CalculateJPEAngle()` (`Vector3.Angle(startForward, endForward)`) and displays the error in degrees. Spawns a button panel for Restart/Exit.
+- **`JPE_TestManager.cs`** — Orchestrates the test. Listens for OVR grip presses (`OVRInput.Button.PrimaryHandTrigger` / `SecondaryHandTrigger`) to record 3 markers (start/extreme/return) projected onto a flat virtual wall perpendicular to the initial gaze direction. Error is the on-wall displacement between start and return markers along a single axis, selected via the `direction` field (`JPEDirection.Horizontal` or `.Vertical`) — call `SetDirectionHorizontal()` / `SetDirectionVertical()` (wire to start-menu buttons) to choose before the test begins. Runs `totalTrials` (default 5) trials and averages the results. Spawns a button panel for Next/Restart/Exit.
 - **`JPETargetVisual.cs`** — Controls visibility of individual target markers (created invisible, revealed together after all 3 are placed).
 - **`JPETargetController.cs`** — Utility for bulk show/hide/clear of all JPE target objects.
 - **`JPETestMenuUI.cs`** — UI panel component; exposes `resultText` for the result display.

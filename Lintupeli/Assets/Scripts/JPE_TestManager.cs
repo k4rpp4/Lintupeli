@@ -4,8 +4,17 @@ using UnityEngine.Events;
 using TMPro;
 using UnityEngine.UI;
 
+public enum JPEDirection
+{
+    Horizontal,
+    Vertical
+}
+
 public class JPE_TestManager : MonoBehaviour
 {
+    [Header("Test Direction")]
+    public JPEDirection direction = JPEDirection.Horizontal;
+
     [Header("References")]
     public Transform headTransform;
     public GameObject jpeTargetPrefab;
@@ -105,7 +114,7 @@ public class JPE_TestManager : MonoBehaviour
             }
             else
             {
-                float distCm = Vector3.Distance(startMarkerPosition, targetPosition) * 100f;
+                float distCm = GetAxisDistanceCm(startMarkerPosition, targetPosition);
                 textComponent.text = pointNames[index] + "\n" + distCm.ToString("F1") + " cm";
             }
         }
@@ -139,16 +148,49 @@ public class JPE_TestManager : MonoBehaviour
         return headTransform.position + rayDir * t;
     }
 
+    // Returns the distance between two on-wall points along the currently
+    // selected test axis only (horizontal = wall's right vector, vertical =
+    // wall's up vector), instead of the full on-wall displacement.
+    float GetAxisDistanceCm(Vector3 from, Vector3 to)
+    {
+        Vector3 referenceUp = Mathf.Abs(Vector3.Dot(wallNormal, Vector3.up)) > 0.999f
+            ? Vector3.forward
+            : Vector3.up;
+
+        Vector3 wallRight = Vector3.Cross(referenceUp, wallNormal).normalized;
+        Vector3 wallUp = Vector3.Cross(wallNormal, wallRight).normalized;
+
+        Vector3 displacement = to - from;
+        Vector3 axis = direction == JPEDirection.Horizontal ? wallRight : wallUp;
+
+        return Mathf.Abs(Vector3.Dot(displacement, axis)) * 100f;
+    }
+
+    // "Horisontaalinen" / "Vertikaalinen" — used in the result text and as the
+    // instructions header so the active test direction is always visible.
+    string GetDirectionLabel()
+    {
+        return direction == JPEDirection.Horizontal ? "Horisontaalinen" : "Vertikaalinen";
+    }
+
+    // ASCII arrow hint (the project's TMP font has no Unicode arrow glyphs),
+    // shown next to the direction label so the direction is illustrated, not
+    // just named.
+    string GetDirectionArrow()
+    {
+        return direction == JPEDirection.Horizontal ? "<->" : "^v";
+    }
+
     void CalculateJPEDistance()
     {
-        float distanceCm = Vector3.Distance(startMarkerPosition, endMarkerPosition) * 100f;
+        float distanceCm = GetAxisDistanceCm(startMarkerPosition, endMarkerPosition);
         trialResults.Add(distanceCm);
 
         if (resultText == null)
             return;
 
         string text = "Kierros " + currentTrial + "/" + totalTrials +
-                      "\nJPE-virhe: " + distanceCm.ToString("F1") + " cm";
+                      "\n" + GetDirectionLabel() + " JPE-virhe: " + distanceCm.ToString("F1") + " cm";
 
         if (currentTrial >= totalTrials)
         {
@@ -255,9 +297,7 @@ public class JPE_TestManager : MonoBehaviour
     void NextTrial()
     {
         ClearMarkers();
-
-        if (instructions != null)
-            instructions.text = firstInstruction;
+        SetInstructionText(firstInstruction);
     }
 
     public void RestartTest()
@@ -270,8 +310,7 @@ public class JPE_TestManager : MonoBehaviour
         if (onRestartTest != null)
             onRestartTest.Invoke();
 
-        if (instructions != null)
-            instructions.text = firstInstruction;
+        SetInstructionText(firstInstruction);
     }
 
     public void ExitTest()
@@ -282,29 +321,53 @@ public class JPE_TestManager : MonoBehaviour
             onExitTest.Invoke();
     }
 
+    // Wire these to the direction-selection buttons in the start menu.
+    public void SetDirectionHorizontal()
+    {
+        direction = JPEDirection.Horizontal;
+    }
+
+    public void SetDirectionVertical()
+    {
+        direction = JPEDirection.Vertical;
+    }
+
     void UpdateInstructionText(int index)
+    {
+        switch (index)
+        {
+            case 0:
+                SetInstructionText(firstInstruction);
+                break;
+
+            case 1:
+                SetInstructionText(secondInstruction);
+                break;
+
+            case 2:
+                SetInstructionText(thirdInstruction);
+                break;
+
+            default:
+                if (instructions != null)
+                    instructions.text = "";
+                break;
+        }
+    }
+
+    // Shows the given instruction body with a direction header on top, and
+    // fills in the {SUUNTA} token (if present) with a direction-specific
+    // phrase, so the same Inspector-authored instruction text reads
+    // differently for the horizontal vs. vertical test.
+    void SetInstructionText(string body)
     {
         if (instructions == null)
             return;
 
-        switch (index)
-        {
-            case 0:
-                instructions.text = firstInstruction;
-                break;
+        string directionPhrase = direction == JPEDirection.Horizontal ? "sivulle" : "ylös tai alas";
+        string filledBody = body != null ? body.Replace("{SUUNTA}", directionPhrase) : "";
 
-            case 1:
-                instructions.text = secondInstruction;
-                break;
-
-            case 2:
-                instructions.text = thirdInstruction;
-                break;
-
-            default:
-                instructions.text = "";
-                break;
-        }
+        instructions.text = GetDirectionLabel() + " testi " + GetDirectionArrow() + "\n\n" + filledBody;
     }
 
 }
