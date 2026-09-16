@@ -3474,6 +3474,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 626165367}
+    - targetCorrespondingSourceObject: {fileID: 400002, guid: 126d619cf4daa52469682f85c1378b4a,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1781455878}
     - targetCorrespondingSourceObject: {fileID: 482130, guid: 126d619cf4daa52469682f85c1378b4a,
         type: 3}
       insertIndex: -1
@@ -3967,6 +3971,7 @@ MonoBehaviour:
   rayMaterial: {fileID: 0}
   sphereMaterial: {fileID: 0}
   sphereScale: 0.6
+  placementEnabled: 1
 --- !u!114 &501234703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11946,10 +11951,6 @@ PrefabInstance:
     - {fileID: 5678980715532230634, guid: d4ea6a0a3bc325444a4f332171438fcd, type: 3}
     - {fileID: 3778921118078438294, guid: d4ea6a0a3bc325444a4f332171438fcd, type: 3}
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 3778921118949953956, guid: d4ea6a0a3bc325444a4f332171438fcd,
-        type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1781455878}
     - targetCorrespondingSourceObject: {fileID: 698551298687156397, guid: d4ea6a0a3bc325444a4f332171438fcd,
         type: 3}
       insertIndex: 0
@@ -30480,12 +30481,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 640595840}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &1139164690 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 3778921118949953956, guid: d4ea6a0a3bc325444a4f332171438fcd,
-    type: 3}
-  m_PrefabInstance: {fileID: 640595840}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1148354885 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4593680705043960, guid: 126d619cf4daa52469682f85c1378b4a,
@@ -33968,7 +33963,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1139164690}
+    m_TransformParent: {fileID: 417015903}
     m_Modifications:
     - target: {fileID: 3830566889059734229, guid: e6df825cf24d16a49b508170934598b3,
         type: 3}
@@ -34058,12 +34053,12 @@ PrefabInstance:
     - target: {fileID: 4498007129608483381, guid: e6df825cf24d16a49b508170934598b3,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.5
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: 4498007129608483381, guid: e6df825cf24d16a49b508170934598b3,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 0.55
       objectReference: {fileID: 0}
     - target: {fileID: 4498007129608483381, guid: e6df825cf24d16a49b508170934598b3,
         type: 3}
@@ -34073,17 +34068,17 @@ PrefabInstance:
     - target: {fileID: 4498007129608483381, guid: e6df825cf24d16a49b508170934598b3,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4498007129608483381, guid: e6df825cf24d16a49b508170934598b3,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4498007129608483381, guid: e6df825cf24d16a49b508170934598b3,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4498007129608483381, guid: e6df825cf24d16a49b508170934598b3,
         type: 3}
@@ -34207,6 +34202,7 @@ MonoBehaviour:
   nameInputField: {fileID: 378982210}
   panelRoot: {fileID: 1781455879}
   rayCheckpointPlacer: {fileID: 501234700}
+  keyboardGo: {fileID: 925553730}
 --- !u!1 &1797289939
 GameObject:
   m_ObjectHideFlags: 0
@@ -35177,9 +35173,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
-      - m_Target: {fileID: 501234700}
-        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
-        m_MethodName: SetActive
+      - m_Target: {fileID: 501234702}
+        m_TargetAssemblyTypeName: RayCheckpointPlacer, Assembly-CSharp
+        m_MethodName: SetPlacementEnabled
         m_Mode: 6
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

@@ -27,6 +27,13 @@ public class RayCheckpointPlacer : MonoBehaviour
     public Material sphereMaterial;
     public float sphereScale = 0.6f;
 
+    // While false, the ray/sphere still show (so the player always has
+    // something to aim with, e.g. while naming/saving a route with the
+    // keyboard) but the trigger no longer adds checkpoints. Set via
+    // SetPlacementEnabled(); replaces fully deactivating this GameObject for
+    // that case, which used to kill the only ray visual in the app.
+    public bool placementEnabled = true;
+
     private LineRenderer lineRenderer;
     private GameObject indicatorSphere;
     private Renderer sphereRenderer;
@@ -126,14 +133,13 @@ public class RayCheckpointPlacer : MonoBehaviour
             direction = (rayOrigin.rotation * Quaternion.Euler(aimRotationOffset)) * Vector3.forward;
         }
 
-        // Pointing at a UI element right now — let the UI's own ray take
-        // over and hide ours instead of showing two overlapping rays.
-        if (uiRayInteractor != null && uiRayInteractor.HasCandidate)
-        {
-            lineRenderer.enabled = false;
-            indicatorSphere.SetActive(false);
-            return;
-        }
+        // Note: this app has no separate "default" ray visual elsewhere
+        // (confirmed - no ControllerRayVisual anywhere in the scene), so this
+        // is the only ray the player ever sees. It used to hide itself
+        // whenever pointing at any UI (on the assumption something else
+        // would take over), which left the player with no ray at all while
+        // aiming at the keyboard/buttons during route naming - always show
+        // it instead.
 
         Vector3 rawPoint = Physics.Raycast(origin, direction, out RaycastHit hit, maxRayDistance, hitMask) && hit.distance >= minHitDistance
             ? hit.point
@@ -148,10 +154,13 @@ public class RayCheckpointPlacer : MonoBehaviour
         lineRenderer.SetPosition(0, origin);
         lineRenderer.SetPosition(1, endPoint);
 
-        indicatorSphere.SetActive(true);
+        // Only show the placement-preview sphere and actually add a
+        // checkpoint while placement is enabled - e.g. not while the
+        // route-naming panel/keyboard is open over this same ray.
+        indicatorSphere.SetActive(placementEnabled);
         indicatorSphere.transform.position = endPoint;
 
-        if (triggerPressed)
+        if (triggerPressed && placementEnabled)
         {
             checkpointController.AddCheckpoint(endPoint);
 
@@ -160,6 +169,11 @@ public class RayCheckpointPlacer : MonoBehaviour
 
             RefreshUndoButtonVisibility();
         }
+    }
+
+    public void SetPlacementEnabled(bool value)
+    {
+        placementEnabled = value;
     }
 
     // Wire to an "undo" button while placing a route.

@@ -11,6 +11,9 @@ public class RouteSaveMenu : MonoBehaviour
     [Header("Resumed when this menu closes (Confirm or Cancel)")]
     public GameObject rayCheckpointPlacer;
 
+    [Header("Hidden when this menu closes")]
+    public GameObject keyboardGo;
+
     public void ConfirmSave()
     {
         string routeName = nameInputField != null ? nameInputField.text.Trim() : "";
@@ -32,7 +35,16 @@ public class RouteSaveMenu : MonoBehaviour
         if (panelRoot != null)
             panelRoot.SetActive(false);
 
+        if (keyboardGo != null)
+            keyboardGo.SetActive(false);
+
         if (rayCheckpointPlacer != null)
+        {
             rayCheckpointPlacer.SetActive(true);
+
+            var placer = rayCheckpointPlacer.GetComponent<RayCheckpointPlacer>();
+            if (placer != null)
+                placer.SetPlacementEnabled(true);
+        }
     }
 }

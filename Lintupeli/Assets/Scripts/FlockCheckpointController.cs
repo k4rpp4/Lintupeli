@@ -90,7 +90,8 @@ public class FlockCheckpointController : MonoBehaviour
 
     void Update()
     {
-        if (gpuFlock == null ||
+        if (!gameplayActive ||
+            gpuFlock == null ||
             referenceTransform == null ||
             computedCheckpoints == null ||
             computedCheckpoints.Count == 0 ||
@@ -136,11 +137,20 @@ public class FlockCheckpointController : MonoBehaviour
         }
     }
 
+    // Gates the whole per-frame progression/indicator logic in Update() -
+    // without this, the next-checkpoint indicator ball popped up as soon as
+    // any checkpoints existed (e.g. while still placing them with the ray,
+    // or on the save/naming screen afterward), long before "Aloita" was
+    // ever pressed.
+    private bool gameplayActive = false;
+
     // Wire to whatever actually starts gameplay (e.g. the "Aloita" button),
-    // so the arrows only appear once the player is flying, not while still
-    // browsing menus.
+    // so the arrows/indicator only appear once the player is flying, not
+    // while still browsing menus.
     public void ShowGuidanceArrows()
     {
+        gameplayActive = true;
+
         foreach (var arrow in arrowTransforms)
             if (arrow != null)
                 arrow.gameObject.SetActive(true);
@@ -151,6 +161,11 @@ public class FlockCheckpointController : MonoBehaviour
 
     public void HideGuidanceArrows()
     {
+        gameplayActive = false;
+
+        if (activeCheckpointIndicator != null)
+            activeCheckpointIndicator.SetActive(false);
+
         foreach (var arrow in arrowTransforms)
             if (arrow != null)
                 arrow.gameObject.SetActive(false);
