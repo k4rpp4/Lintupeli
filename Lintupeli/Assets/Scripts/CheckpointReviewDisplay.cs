@@ -7,7 +7,6 @@ public class CheckpointReviewDisplay : MonoBehaviour
 {
     public FlockCheckpointController checkpointController;
     public GameObject checkPointReviewPrefab;
-    public Transform headTransform;
 
     private List<GameObject> spawnedMarkers = new List<GameObject>();
 
@@ -32,9 +31,22 @@ public class CheckpointReviewDisplay : MonoBehaviour
         ClearMarkers();
 
         var positions = checkpointController.ComputedCheckpoints;
+        Vector3 referencePosition = checkpointController.ReferencePosition;
+
         for (int i = 0; i < positions.Count; i++)
         {
-            GameObject marker = Instantiate(checkPointReviewPrefab, positions[i], Quaternion.identity);
+            // Face the fixed reference point (not the live, moving headset)
+            // so the number reads correctly and stays stable even if the
+            // player walks around while placing more points. The extra 180°
+            // yaw corrects for the number's readable side being on the
+            // model's back face — without it the turning direction is right
+            // but the text itself still faces away from the player.
+            Vector3 dir = referencePosition - positions[i];
+            Quaternion rotation = dir.sqrMagnitude > 0.0001f
+                ? Quaternion.LookRotation(dir) * Quaternion.Euler(0f, 180f, 0f)
+                : Quaternion.identity;
+
+            GameObject marker = Instantiate(checkPointReviewPrefab, positions[i], rotation);
 
             TMP_Text label = marker.GetComponentInChildren<TMP_Text>();
             if (label != null)
@@ -50,17 +62,5 @@ public class CheckpointReviewDisplay : MonoBehaviour
             if (marker != null) Destroy(marker);
 
         spawnedMarkers.Clear();
-    }
-
-    void Update()
-    {
-        foreach (var marker in spawnedMarkers)
-        {
-            if (marker == null) continue;
-
-            Vector3 dir = marker.transform.position - headTransform.position;
-            if (dir.sqrMagnitude > 0.0001f)
-                marker.transform.rotation = Quaternion.LookRotation(dir);
-        }
     }
 }

@@ -24,14 +24,21 @@ public class JPE_TestManager : MonoBehaviour
     public GameObject buttonPanelPrefab;
     private GameObject currentButtonPanel;
 
+    [Header("Direction Indicator")]
+    public SpriteRenderer directionIndicatorRenderer;
+    public Sprite horizontalIndicatorSprite;
+    public Sprite verticalIndicatorSprite;
+
     [Header("Settings")]
     public float distanceFromHead = 0.9f;
     public int maxTargets = 3;
     public int totalTrials = 5;
+    public float resultPanelMargin = 0.4f;
 
     private Vector3 wallOrigin;
     private Vector3 wallNormal;
     private Vector3 startMarkerPosition;
+    private Vector3 extremeMarkerPosition;
     private Vector3 endMarkerPosition;
 
     private int index = 0;
@@ -94,6 +101,9 @@ public class JPE_TestManager : MonoBehaviour
         else
         {
             targetPosition = ProjectOntoWall(forward);
+
+            if (index == 1)
+                extremeMarkerPosition = targetPosition;
         }
 
         Quaternion targetRotation = Quaternion.LookRotation(wallNormal);
@@ -134,6 +144,7 @@ public class JPE_TestManager : MonoBehaviour
             CalculateJPEDistance();
 
             instructions.text = "";
+            UpdateDirectionIndicator(false);
 
             testComplete = true;
         }
@@ -148,17 +159,23 @@ public class JPE_TestManager : MonoBehaviour
         return headTransform.position + rayDir * t;
     }
 
-    // Returns the distance between two on-wall points along the currently
-    // selected test axis only (horizontal = wall's right vector, vertical =
-    // wall's up vector), instead of the full on-wall displacement.
-    float GetAxisDistanceCm(Vector3 from, Vector3 to)
+    // Right/up basis vectors for the wall plane, derived from wallNormal.
+    void GetWallBasis(out Vector3 wallRight, out Vector3 wallUp)
     {
         Vector3 referenceUp = Mathf.Abs(Vector3.Dot(wallNormal, Vector3.up)) > 0.999f
             ? Vector3.forward
             : Vector3.up;
 
-        Vector3 wallRight = Vector3.Cross(referenceUp, wallNormal).normalized;
-        Vector3 wallUp = Vector3.Cross(wallNormal, wallRight).normalized;
+        wallRight = Vector3.Cross(referenceUp, wallNormal).normalized;
+        wallUp = Vector3.Cross(wallNormal, wallRight).normalized;
+    }
+
+    // Returns the distance between two on-wall points along the currently
+    // selected test axis only (horizontal = wall's right vector, vertical =
+    // wall's up vector), instead of the full on-wall displacement.
+    float GetAxisDistanceCm(Vector3 from, Vector3 to)
+    {
+        GetWallBasis(out Vector3 wallRight, out Vector3 wallUp);
 
         Vector3 displacement = to - from;
         Vector3 axis = direction == JPEDirection.Horizontal ? wallRight : wallUp;
@@ -166,19 +183,42 @@ public class JPE_TestManager : MonoBehaviour
         return Mathf.Abs(Vector3.Dot(displacement, axis)) * 100f;
     }
 
-    // "Horisontaalinen" / "Vertikaalinen" — used in the result text and as the
+    // Places the result panel a fixed, short distance from the start marker
+    // (so it always appears close to the user and is easy to find) on
+    // whichever vertical side the extreme/return markers did NOT go toward
+    // (so it still never overlaps them, even on a large vertical excursion).
+    Vector3 GetResultPanelPosition()
+    {
+        GetWallBasis(out Vector3 wallRight, out Vector3 wallUp);
+
+        float rightStart = Vector3.Dot(startMarkerPosition - wallOrigin, wallRight);
+        float upStart = Vector3.Dot(startMarkerPosition - wallOrigin, wallUp);
+        float upExtreme = Vector3.Dot(extremeMarkerPosition - wallOrigin, wallUp);
+        float upEnd = Vector3.Dot(endMarkerPosition - wallOrigin, wallUp);
+
+        bool markersWentDown = upExtreme < upStart && upEnd < upStart;
+        float verticalSign = markersWentDown ? 1f : -1f;
+
+        return wallOrigin + wallRight * rightStart + wallUp * (upStart + verticalSign * resultPanelMargin);
+    }
+
+    // "Vaaka" / "Pysty" — used in the result text and as the
     // instructions header so the active test direction is always visible.
     string GetDirectionLabel()
     {
-        return direction == JPEDirection.Horizontal ? "Horisontaalinen" : "Vertikaalinen";
+        return direction == JPEDirection.Horizontal ? "Vaaka" : "Pysty";
     }
 
-    // ASCII arrow hint (the project's TMP font has no Unicode arrow glyphs),
-    // shown next to the direction label so the direction is illustrated, not
-    // just named.
-    string GetDirectionArrow()
+    // Shows the sprite matching the current test direction next to the
+    // instructions text, in place of the old ASCII arrow hint.
+    void UpdateDirectionIndicator(bool visible)
     {
-        return direction == JPEDirection.Horizontal ? "<->" : "^v";
+        if (directionIndicatorRenderer == null)
+            return;
+
+        directionIndicatorRenderer.sprite =
+            direction == JPEDirection.Horizontal ? horizontalIndicatorSprite : verticalIndicatorSprite;
+        directionIndicatorRenderer.enabled = visible;
     }
 
     void CalculateJPEDistance()
@@ -228,11 +268,9 @@ public class JPE_TestManager : MonoBehaviour
         if (currentButtonPanel != null)
             Destroy(currentButtonPanel);
 
-        Vector3 offset = new Vector3(0f, -0.5f, 0f);
-
         currentButtonPanel = Instantiate(
             buttonPanelPrefab,
-            startPoint.position + offset,
+            GetResultPanelPosition(),
             Quaternion.LookRotation(wallNormal)
         );
 
@@ -288,6 +326,7 @@ public class JPE_TestManager : MonoBehaviour
         wallOrigin = Vector3.zero;
         wallNormal = Vector3.zero;
         startMarkerPosition = Vector3.zero;
+        extremeMarkerPosition = Vector3.zero;
         endMarkerPosition = Vector3.zero;
 
         testComplete = false;
@@ -351,6 +390,7 @@ public class JPE_TestManager : MonoBehaviour
             default:
                 if (instructions != null)
                     instructions.text = "";
+                UpdateDirectionIndicator(false);
                 break;
         }
     }
@@ -367,7 +407,8 @@ public class JPE_TestManager : MonoBehaviour
         string directionPhrase = direction == JPEDirection.Horizontal ? "sivulle" : "ylös tai alas";
         string filledBody = body != null ? body.Replace("{SUUNTA}", directionPhrase) : "";
 
-        instructions.text = GetDirectionLabel() + " testi " + GetDirectionArrow() + "\n\n" + filledBody;
+        instructions.text = GetDirectionLabel() + " testi\n\n" + filledBody;
+        UpdateDirectionIndicator(true);
     }
 
 }

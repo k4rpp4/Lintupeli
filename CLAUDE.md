@@ -2,6 +2,47 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Meneillään: Reitineditori-ominaisuudet (VR-natiivi checkpoint-editori)
+
+Tarkoitus: tämä osio riittää sellaisenaan jatkamaan työtä ilman aiempaa keskusteluhistoriaa (esim. toiselta koneelta).
+
+### Miten peli oikeasti toimii (tärkein arkkitehtuurihuomio)
+- Parvea EI ohjata suoraan checkpointeilla. `FlockFollowPointController` (kiinnitetty `GPUFlock.Target`-objektiin) laskee joka framessa pisteen 40 yksikköä (`RandomPathGenerator.distance`) suoraan pelaajan senhetkisessä katsesuunnassa eteenpäin ja liukuu sinne — parvea siis ohjataan PÄÄTÄ KÄÄNTÄMÄLLÄ.
+- Checkpointit ovat pelkkiä visuaalisia ohjauspisteitä: `FlockCheckpointController.Update()` näyttää seuraavan checkpointin osoittimen (pallo + nuolet) ja vertaa parven keskipistettä (`GPUFlock.FlockCenter`) siihen; kun tarpeeksi lähellä, siirrytään seuraavaan checkpointtiin.
+- KAIKKI checkpointit (satunnaiset, ladatut tiedostosta, sädellä sijoitetut) ovat aina tasan 40 yksikön päässä kiinteästä `FlockCheckpointController.ReferencePosition`:sta — jäädytetty kertaalleen `Start()`:ssa CenterEyeAnchorin sen hetkisestä sijainnista, EI elävä/liikkuva arvo, jottei reitti vääristy jos pelaaja kävelee fyysisesti reittiä rakentaessaan.
+
+### Tehty tässä sessiossa
+**Visuaalit:** Tuotu "Mountain Terrain rocks and tree" -paketti (`Assets/Mountain Terrain rocks and tree/`), uusi `MountainTerrain`-objekti skaalattu 33.33× vastaamaan vanhaa `Terrain`-kokoa; vanha `Terrain` pois päältä muttei poistettu (käyttäjä on sittemmin monistanut vuorta ~21 kertaa "Mountainterrain"-ryhmän alle). Taivaaksi Poly Havenin CC0-paneraama `Assets/Materials/Skybox/MountainSky_ChampagneCastle.mat`. JPE-testin "Horisontaalinen/Vertikaalinen" → "Vaaka/Pysty", `horizontal.png`/`vertical.png` sisällöt korjattu oikeinpäin, ASCII-nuolet korvattu oikeilla kuvilla.
+
+**Checkpoint-korjaukset (`FlockCheckpointController.cs`):**
+- `ResetProgress()` on nyt `public` ja kytketty "Aloita"-nappiin — korjasi bugin jossa saman reitin toinen pelikerta ei näyttänyt enää mitään (`completionEventFired` jäi jumiin).
+- Ohjausnuolet piilossa oletuksena, näkyvät vain `ShowGuidanceArrows()`:n kautta (kytketty "Aloita"-nappiin).
+- `ConstrainToPlacementDistance(Vector3)` pakottaa minkä tahansa pisteen tasan 40 yksikön päähän `ReferencePosition`:sta — käytössä sekä esikatselussa että tallennuksessa.
+
+**Uusi ominaisuus, sädesijoittelu (`RayCheckpointPlacer.cs`, uusi):** kytketty "Choose-with-ray-button"-nappiin.
+- Säde+pallo oikean ohjaimen suunnassa; suunta lainataan ajossa löydetyltä Meta Interaction SDK:n `RayInteractor`-komponentilta (täsmää siis automaattisesti UI:n omaan säteeseen), piiloutuu kun `RayInteractor.HasCandidate` (osoittaa UI:ta).
+- Liipaisin (kumpi käsi tahansa, `OVRInput.GetDown(Button.Primary/SecondaryIndexTrigger)` — sama kaava kuin `JPE_TestManager`/`ShowJPETargetOnGrip`) lisää checkpointin ja numeroidun esikatselupallon (`CheckpointReviewDisplay` + olemassa oleva `CheckPointReview.prefab`).
+- Kenttä tyhjenee aina tilaan mennessä.
+- "Peru edellinen" (näkyy vain kun ≥1 piste) / "Valmis" -napit paneelissa `RayModeUiPanel` — CenterEyeAnchorin lapsi, pysyy näkökentän alareunassa. Rakennettu kopioimalla `JPETestMenu.prefab` (EI Metan demopaneelia, jossa oli ylimääräisiä playback-nappeja).
+- Toolbarin "Tallenna" avaa `RouteNamePanel`in (sama JPETestMenu-pohja): `InputField` + Metan `OVRVirtualKeyboard` (`OVRVirtualKeyboardInputFieldTextHandler`), tallennus `RouteSaveMenu.cs`:n kautta `FlockCheckpointController.SaveCheckpoints()`:iin.
+- "Aloita" lukittu (`StartButtonAvailability.cs`, uusi) kunnes reitissä ≥1 checkpoint.
+- `CheckpointReviewDisplay.cs`: numerot kääntyvät `ReferencePosition`:iin (ei elävään päähän), lasketaan kertaalleen spawnissa.
+
+**Korjattu vahinko:** `OVRPhysicsRaycaster` lisättiin vahingossa päähän virtuaalinäppäimistöä varten ja rikkoi kaikkien UI-nappien sädeklikkauksen (peli käyttää jo Metan `PointableCanvasModule`+`RayInteractor`-järjestelmää). Poistettu.
+
+### Tunnetut puutteet / seuraavat askeleet
+- **"Draw-pattern-Button" ja "Choose-area-Button" ovat yhä toteuttamatta** — `OnClick` sulkee vain valikon. Suunniteltu käyttötarkoitus pitää käydä läpi käyttäjän kanssa samaan tapaan kuin sädesijoittelu (ks. keskusteluhistoria: kysy ensin mitä pelaajan pitäisi tehdä, miten se muuttuu `CheckpointPositions`-listaksi).
+- `OVRVirtualKeyboard`:n `controllerRaycaster`-viittaus on tyhjä (poistettiin `OVRPhysicsRaycaster`-korjauksen yhteydessä) — jos näppäimistön säde-interaktio ei toimi, sitä EI pidä korjata lisäämällä `OVRPhysicsRaycaster` takaisin (se rikkoi kaiken muun); pitää selvittää oikea tapa integroitua Metan `PointableCanvasModule`-järjestelmään.
+- Sädesijoittelun paneelien (`RayModeUiPanel`/`RouteNamePanel`) sijainti/koko on aseteltu koodilla ilman visuaalista esikatselua; käyttäjä on jo säätänyt niitä kertaalleen käsin editorissa.
+- Koko sädesijoittelu-toiminnallisuutta ei ole varmistettu toimivaksi päästä päähän session viimeisimmän commitin jälkeen.
+- Git-repo (`origin` = `git@github.com:k4rpp4/Lintupeli.git`) saattaa sisältää committaamatonta työtä tältä sessiolta — tarkista `git status` ensimmäisenä.
+
+### Tärkeimmät tiedostot
+- `Assets/Scripts/FlockCheckpointController.cs` — checkpoint-datamalli ja pelilogiikka
+- `Assets/Scripts/RayCheckpointPlacer.cs`, `RouteSaveMenu.cs`, `StartButtonAvailability.cs` — uudet tässä sessiossa
+- `Assets/Scripts/CheckpointReviewDisplay.cs` — numeroitujen esikatselupallojen piirto
+- `Assets/Scenes/FlockScene.unity` — kaikki UI-kytkennät (paljon käsin muokattua YAML:ia, koska Unity Editor oli usein hidas reagoimaan live-skripteihin session aikana — jos jokin kytkentä näyttää mystisesti rikkoutuneen, epäile ensin tätä)
+
 ## Project Overview
 
 **Lintupeli** ("Bird Game" in Finnish) is a Unity VR project targeting Meta Quest headsets. It has two main systems:

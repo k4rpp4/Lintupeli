@@ -31,11 +31,25 @@ public class FlockCheckpointController : MonoBehaviour
     public IReadOnlyList<Vector3> ComputedCheckpoints => computedCheckpoints;
     private int currentCheckpoint = 0;
 
+    // The fixed anchor everything else in this class uses (see below);
+    // exposed so other scripts (e.g. review marker billboarding) can orient
+    // toward the same stable point instead of the live, moving headset.
+    public Vector3 ReferencePosition => referencePosition;
+
     private GameObject activeCheckpointIndicator;
     private bool completionEventFired = false;
 
+    // Captured once at Start and never updated again, so every checkpoint
+    // (random, loaded, or ray-placed one at a time over a real session) is
+    // anchored to the same fixed spot — not to referenceTransform's live,
+    // room-scale-tracked position, which would drift if the player
+    // physically walks around while placing points.
+    private Vector3 referencePosition;
+
     void Start()
     {
+        referencePosition = referenceTransform != null ? referenceTransform.position : Vector3.zero;
+
         if (randomPathSource != null &&
             randomPathSource.checkpoints != null &&
             randomPathSource.checkpoints.Count > 0)
@@ -43,8 +57,8 @@ public class FlockCheckpointController : MonoBehaviour
             CheckpointPositions = new List<Vector3>(randomPathSource.checkpoints);
         }
 
-        currentCheckpoint = 0;
-        completionEventFired = false;
+        ResetProgress();
+        HideGuidanceArrows();
 
         UpdateComputedCheckpoints();
 
@@ -105,16 +119,46 @@ public class FlockCheckpointController : MonoBehaviour
                 if (activeCheckpointIndicator != null)
                     activeCheckpointIndicator.SetActive(false);
 
-                foreach (var arrow in arrowTransforms)
-                {
-                    if (arrow != null)
-                        arrow.gameObject.SetActive(false);
-                }
+                HideGuidanceArrows();
 
                 completionEventFired = true;
                 OnAllCheckpointsCompleted?.Invoke();
             }
         }
+    }
+
+    // Wire to whatever actually starts gameplay (e.g. the "Aloita" button),
+    // so the arrows only appear once the player is flying, not while still
+    // browsing menus.
+    public void ShowGuidanceArrows()
+    {
+        foreach (var arrow in arrowTransforms)
+            if (arrow != null)
+                arrow.gameObject.SetActive(true);
+    }
+
+    public void HideGuidanceArrows()
+    {
+        foreach (var arrow in arrowTransforms)
+            if (arrow != null)
+                arrow.gameObject.SetActive(false);
+    }
+
+    // Resets progress from a previous run (currentCheckpoint, completion
+    // state), so loading a new game after finishing or abandoning a previous
+    // one starts fresh instead of being stuck thinking it's already done.
+    // Public so it can also be wired to the "Aloita" button directly —
+    // without that, replaying the same already-completed route showed
+    // nothing, since completionEventFired stayed stuck true from the
+    // previous run.
+    // Deliberately does NOT force-show activeCheckpointIndicator: Update()
+    // already shows/positions it correctly whenever there are checkpoints to
+    // fly to, and forcing it here made it reappear (frozen, unnumbered) even
+    // while the route is empty, e.g. right after entering ray-placement mode.
+    public void ResetProgress()
+    {
+        currentCheckpoint = 0;
+        completionEventFired = false;
     }
 
     void UpdateComputedCheckpoints()
@@ -126,13 +170,19 @@ public class FlockCheckpointController : MonoBehaviour
 
         foreach (var offset in CheckpointPositions)
         {
-            Vector3 worldPos = referenceTransform.position + offset;
+            Vector3 worldPos = referencePosition + offset;
 
             if (worldPos.y < minHeight)
                 worldPos.y = minHeight;
 
             computedCheckpoints.Add(worldPos);
         }
+
+        // With no checkpoints left, Update() stops touching the indicator
+        // (it early-returns), so it would otherwise stay frozen and visible
+        // at its last position — hide it explicitly instead.
+        if (computedCheckpoints.Count == 0 && activeCheckpointIndicator != null)
+            activeCheckpointIndicator.SetActive(false);
     }
 
     [System.Serializable]
@@ -166,7 +216,56 @@ public class FlockCheckpointController : MonoBehaviour
         {
             CheckpointPositions = data.positions;
             UpdateComputedCheckpoints();
+            ResetProgress();
         }
+    }
+
+    // Snaps a world-space point onto the same fixed-radius sphere around
+    // referenceTransform that RandomPathGenerator places its own checkpoints
+    // on, keeping the flock's steering distance consistent regardless of how
+    // a checkpoint was created (random, ray-placed, drawn, ...).
+    public Vector3 ConstrainToPlacementDistance(Vector3 worldPosition)
+    {
+        if (referenceTransform == null || randomPathSource == null)
+            return worldPosition;
+
+        Vector3 direction = (worldPosition - referencePosition).normalized;
+        return referencePosition + direction * randomPathSource.distance;
+    }
+
+    // Appends a single checkpoint at a world-space position (e.g. from a
+    // player-placed point), converting it to the same reference-relative
+    // offset format used by CheckpointPositions.
+    public void AddCheckpoint(Vector3 worldPosition)
+    {
+        worldPosition = ConstrainToPlacementDistance(worldPosition);
+
+        Vector3 offset = referenceTransform != null
+            ? worldPosition - referencePosition
+            : worldPosition;
+
+        CheckpointPositions.Add(offset);
+        UpdateComputedCheckpoints();
+    }
+
+    // Discards the current route so a new one can be built from scratch
+    // (e.g. when entering a manual checkpoint-placement mode).
+    public void ClearCheckpoints()
+    {
+        CheckpointPositions.Clear();
+        UpdateComputedCheckpoints();
+        ResetProgress();
+    }
+
+    // Removes the most recently placed checkpoint (e.g. an "undo" button
+    // while manually placing a route). No-op if there are none.
+    public void RemoveLastCheckpoint()
+    {
+        if (CheckpointPositions == null || CheckpointPositions.Count == 0)
+            return;
+
+        CheckpointPositions.RemoveAt(CheckpointPositions.Count - 1);
+        UpdateComputedCheckpoints();
     }
 
     void OnDrawGizmos()
