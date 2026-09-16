@@ -30,18 +30,26 @@ Tarkoitus: tämä osio riittää sellaisenaan jatkamaan työtä ilman aiempaa ke
 
 **Korjattu vahinko:** `OVRPhysicsRaycaster` lisättiin vahingossa päähän virtuaalinäppäimistöä varten ja rikkoi kaikkien UI-nappien sädeklikkauksen (peli käyttää jo Metan `PointableCanvasModule`+`RayInteractor`-järjestelmää). Poistettu.
 
+### Checkpoint-edistymisen HUD ja pelin asetusliukusäätimet (uusin lisäys, committoitu)
+- **`CheckpointProgressHud.cs`** (uusi): päähän sidottu "kerätty/yhteensä"-TMP-teksti (`GameplaySettingsControls`-tyylinen erillinen objekti nimeltä `CheckpointProgressHud`, `CenterEyeAnchor`in lapsi). Näkyvyys kytketty `FlockCheckpointController.progressHudObject`-kenttään, jonka `ShowGuidanceArrows()`/`HideGuidanceArrows()` asettavat päälle/pois — eli näkyy vain kun peli on oikeasti käynnissä ("Aloita" asti reitin loppuun).
+- **`GameplaySettingsUI.cs`** (uusi): kaksi liukusäädintä ("Lintujen nopeus" ja "Checkpointin herkkyys") lisätty PÄÄVALIKON OMAAN canvakseen (`GameplaySettingsControls`, lapsi samalle RectTransformille `640595841` kuin `StartButton` ym. — EI erillinen maailmapaneeli, käyttäjä halusi ne saman canvaksen sisään ja asettelee sijainnin itse editorissa). Sliderit rakennettu käsin (`UnityEngine.UI.Slider` + Background/Fill Area/Handle), ei Metan valmiita Building Block -slidereitä.
+  - Nopeus säätää suoraan `GPUFlock.BoidSpeed`:ia (1–15), herkkyys `FlockCheckpointController.CheckpointRadius`:ia (1–15) — huom. "herkkyys" ei ole lintumäärä pallon sisällä vaan `GPUFlock.FlockCenter`:in (kaikkien boidien keskiarvopositio) etäisyysraja checkpointista.
+  - Molemmat sliderit tallentuvat/latautuvat NYT osana reitin JSON-tiedostoa (`FlockCheckpointController.SaveCheckpoints()`/`LoadCheckpoints()`, kentät `boidSpeed`/`checkpointRadius` `CheckpointData`-luokassa, vanhoille tallennuksille fallback-oletukset 6.0/5.0). Lataus laukaisee uuden `FlockCheckpointController.OnCheckpointsLoaded`-UnityEventin, joka on kytketty `GameplaySettingsUI.RefreshFromCurrentValues()`:iin — sliderit siis hyppäävät ladatun reitin omiin arvoihin sen sijaan että ne jäisivät näyttämään vanhaa asetusta.
+  - Huom: nopeus/herkkyys EIVÄT ole erillinen "asetustiedosto" — ne tallentuvat aina yhdessä sen hetkisen REITIN kanssa ("Tallenna"-napista ray-sijoittelussa). Jos käyttäjä haluaa jatkossa reitistä riippumattoman globaalin asetustallennuksen, se pitää rakentaa erikseen.
+
 ### Tunnetut puutteet / seuraavat askeleet
 - **"Draw-pattern-Button" ja "Choose-area-Button" ovat yhä toteuttamatta** — `OnClick` sulkee vain valikon. Suunniteltu käyttötarkoitus pitää käydä läpi käyttäjän kanssa samaan tapaan kuin sädesijoittelu (ks. keskusteluhistoria: kysy ensin mitä pelaajan pitäisi tehdä, miten se muuttuu `CheckpointPositions`-listaksi).
 - `OVRVirtualKeyboard`:n `controllerRaycaster`-viittaus on tyhjä (poistettiin `OVRPhysicsRaycaster`-korjauksen yhteydessä) — jos näppäimistön säde-interaktio ei toimi, sitä EI pidä korjata lisäämällä `OVRPhysicsRaycaster` takaisin (se rikkoi kaiken muun); pitää selvittää oikea tapa integroitua Metan `PointableCanvasModule`-järjestelmään.
-- Sädesijoittelun paneelien (`RayModeUiPanel`/`RouteNamePanel`) sijainti/koko on aseteltu koodilla ilman visuaalista esikatselua; käyttäjä on jo säätänyt niitä kertaalleen käsin editorissa.
-- Koko sädesijoittelu-toiminnallisuutta ei ole varmistettu toimivaksi päästä päähän session viimeisimmän commitin jälkeen.
-- Git-repo (`origin` = `git@github.com:k4rpp4/Lintupeli.git`) saattaa sisältää committaamatonta työtä tältä sessiolta — tarkista `git status` ensimmäisenä.
+- `GameplaySettingsControls`-paneelin sijainti päävalikon canvaksella (`anchoredPosition: 0,0`, keskellä) on väliaikainen — käyttäjä aikoi siirtää sen itse editorissa tehtyyn tilaan, ei ole vielä vahvistettu lopulliseksi.
+- Git-repo (`origin` = `git@github.com:k4rpp4/Lintupeli.git`) on ajan tasalla viimeisimmän committin (`2ca3516`, "Add checkpoint progress HUD and gameplay settings sliders") jälkeen — tarkista silti `git status` ensimmäisenä varmuuden vuoksi.
+- Unity Editorin havaittu tässä sessiossa toistuvasti jäävän "jumiin" (ei reagoi tiedostomuutoksiin/kääntämiseen) kunnes ikkuna saa fokuksen tai käyttäjä klikkaa jonkin dialogin pois — jos automatisoitu Editor-skripti ei näytä etenevän, pyydä käyttäjää tarkistamaan Unity-ikkuna.
 
 ### Tärkeimmät tiedostot
-- `Assets/Scripts/FlockCheckpointController.cs` — checkpoint-datamalli ja pelilogiikka
-- `Assets/Scripts/RayCheckpointPlacer.cs`, `RouteSaveMenu.cs`, `StartButtonAvailability.cs` — uudet tässä sessiossa
+- `Assets/Scripts/FlockCheckpointController.cs` — checkpoint-datamalli, pelilogiikka, tallennus/lataus (nyt myös nopeus+herkkyys)
+- `Assets/Scripts/RayCheckpointPlacer.cs`, `RouteSaveMenu.cs`, `StartButtonAvailability.cs` — ray-sijoittelu ja tallennus-UI
+- `Assets/Scripts/CheckpointProgressHud.cs`, `GameplaySettingsUI.cs` — uusin HUD ja asetusliukusäätimet
 - `Assets/Scripts/CheckpointReviewDisplay.cs` — numeroitujen esikatselupallojen piirto
-- `Assets/Scenes/FlockScene.unity` — kaikki UI-kytkennät (paljon käsin muokattua YAML:ia, koska Unity Editor oli usein hidas reagoimaan live-skripteihin session aikana — jos jokin kytkentä näyttää mystisesti rikkoutuneen, epäile ensin tätä)
+- `Assets/Scenes/FlockScene.unity` — kaikki UI-kytkennät (paljon käsin muokattua YAML:ia ja Editor-skriptien kautta tehtyjä muutoksia, koska Unity Editor oli usein hidas reagoimaan session aikana — jos jokin kytkentä näyttää mystisesti rikkoutuneen, epäile ensin tätä)
 
 ## Project Overview
 
