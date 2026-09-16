@@ -27,9 +27,18 @@ public class FlockCheckpointController : MonoBehaviour
     [Header("Callbacks")]
     public UnityEvent OnAllCheckpointsCompleted;
 
+    [Header("Progress HUD")]
+    // Optional headset-anchored "collected/total" text display; shown and
+    // hidden alongside the guidance arrows (see ShowGuidanceArrows /
+    // HideGuidanceArrows) so it only appears during actual gameplay.
+    public GameObject progressHudObject;
+
     private List<Vector3> computedCheckpoints = new List<Vector3>();
     public IReadOnlyList<Vector3> ComputedCheckpoints => computedCheckpoints;
     private int currentCheckpoint = 0;
+
+    // Number of checkpoints reached so far in the current run, for HUD display.
+    public int CurrentCheckpointIndex => currentCheckpoint;
 
     // The fixed anchor everything else in this class uses (see below);
     // exposed so other scripts (e.g. review marker billboarding) can orient
@@ -135,6 +144,9 @@ public class FlockCheckpointController : MonoBehaviour
         foreach (var arrow in arrowTransforms)
             if (arrow != null)
                 arrow.gameObject.SetActive(true);
+
+        if (progressHudObject != null)
+            progressHudObject.SetActive(true);
     }
 
     public void HideGuidanceArrows()
@@ -142,6 +154,9 @@ public class FlockCheckpointController : MonoBehaviour
         foreach (var arrow in arrowTransforms)
             if (arrow != null)
                 arrow.gameObject.SetActive(false);
+
+        if (progressHudObject != null)
+            progressHudObject.SetActive(false);
     }
 
     // Resets progress from a previous run (currentCheckpoint, completion
@@ -189,15 +204,30 @@ public class FlockCheckpointController : MonoBehaviour
     private class CheckpointData
     {
         public List<Vector3> positions;
+        // Defaults here matter: JsonUtility leaves fields missing from an
+        // older save file (from before these existed) at these initializer
+        // values rather than at 0, so old saves still load sensible settings.
+        public float boidSpeed = 6f;
+        public float checkpointRadius = 5f;
     }
 
     public string saveFileName = "checkpoints.json";
+
+    // Fired after LoadCheckpoints() finishes, so UI (e.g. the speed/
+    // sensitivity sliders) can refresh itself to the values the load just
+    // applied, without FlockCheckpointController needing to know that UI exists.
+    public UnityEvent OnCheckpointsLoaded;
 
     [ContextMenu("Save Checkpoints")]
     public void SaveCheckpoints()
     {
         string path = Path.Combine(Application.persistentDataPath, saveFileName);
-        var data = new CheckpointData { positions = CheckpointPositions };
+        var data = new CheckpointData
+        {
+            positions = CheckpointPositions,
+            boidSpeed = gpuFlock != null ? gpuFlock.BoidSpeed : 6f,
+            checkpointRadius = CheckpointRadius,
+        };
         File.WriteAllText(path, JsonUtility.ToJson(data, true));
         Debug.Log("Checkpoints saved to: " + path);
     }
@@ -215,8 +245,14 @@ public class FlockCheckpointController : MonoBehaviour
         if (data != null)
         {
             CheckpointPositions = data.positions;
+            CheckpointRadius = data.checkpointRadius;
+            if (gpuFlock != null)
+                gpuFlock.BoidSpeed = data.boidSpeed;
+
             UpdateComputedCheckpoints();
             ResetProgress();
+
+            OnCheckpointsLoaded?.Invoke();
         }
     }
 
