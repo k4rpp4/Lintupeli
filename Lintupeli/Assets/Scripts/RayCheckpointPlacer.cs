@@ -118,45 +118,48 @@ public class RayCheckpointPlacer : MonoBehaviour
             searchedForUiRayInteractor = uiRayInteractor != null;
         }
 
-        // Origin always comes from our own known-correct right-hand anchor —
-        // if the found interactor actually belongs to the other hand, using
-        // its Origin too would fire the ray from the wrong controller.
-        Vector3 origin = rayOrigin.position;
+        Vector3 origin;
         Vector3 direction;
+        bool uiRayActive = false;
         if (uiRayInteractor != null)
         {
-            // Only borrow the aim direction to match the UI ray's angle.
+            // Use both origin and direction from the same interactor so the
+            // two rays start from the exact same point and angle.
+            origin = uiRayInteractor.Origin;
             direction = uiRayInteractor.Forward;
+            uiRayActive = uiRayInteractor.HasCandidate;
         }
         else
         {
+            origin = rayOrigin.position;
             direction = (rayOrigin.rotation * Quaternion.Euler(aimRotationOffset)) * Vector3.forward;
         }
 
-        // Note: this app has no separate "default" ray visual elsewhere
-        // (confirmed - no ControllerRayVisual anywhere in the scene), so this
-        // is the only ray the player ever sees. It used to hide itself
-        // whenever pointing at any UI (on the assumption something else
-        // would take over), which left the player with no ray at all while
-        // aiming at the keyboard/buttons during route naming - always show
-        // it instead.
+        // Hide placement ray and sphere only when actively placing AND pointing
+        // at a UI element — prevents a trigger press from simultaneously
+        // clicking a button AND adding a checkpoint.
+        if (uiRayActive && placementEnabled)
+        {
+            lineRenderer.enabled = false;
+            indicatorSphere.SetActive(false);
+            return;
+        }
 
         Vector3 rawPoint = Physics.Raycast(origin, direction, out RaycastHit hit, maxRayDistance, hitMask) && hit.distance >= minHitDistance
             ? hit.point
             : origin + direction * maxRayDistance;
 
-        // Snap the preview to the same fixed steering distance the flock
-        // actually uses, so the marker shows where the checkpoint will really
-        // end up rather than the raw ray-hit position.
-        Vector3 endPoint = checkpointController.ConstrainToPlacementDistance(rawPoint);
+        // Snap to placement sphere in placement mode; use raw hit when
+        // placement is off (e.g. keyboard open) so the ray stops at nearby
+        // surfaces rather than flying to the 40 m reference sphere.
+        Vector3 endPoint = placementEnabled
+            ? checkpointController.ConstrainToPlacementDistance(rawPoint)
+            : rawPoint;
 
         lineRenderer.enabled = true;
         lineRenderer.SetPosition(0, origin);
         lineRenderer.SetPosition(1, endPoint);
 
-        // Only show the placement-preview sphere and actually add a
-        // checkpoint while placement is enabled - e.g. not while the
-        // route-naming panel/keyboard is open over this same ray.
         indicatorSphere.SetActive(placementEnabled);
         indicatorSphere.transform.position = endPoint;
 

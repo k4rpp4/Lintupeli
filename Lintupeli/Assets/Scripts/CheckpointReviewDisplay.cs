@@ -56,6 +56,18 @@ public class CheckpointReviewDisplay : MonoBehaviour
         }
     }
 
+    public void HideMarkers()
+    {
+        foreach (var marker in spawnedMarkers)
+            if (marker != null) marker.SetActive(false);
+    }
+
+    public void ShowMarkers()
+    {
+        foreach (var marker in spawnedMarkers)
+            if (marker != null) marker.SetActive(true);
+    }
+
     public void ClearMarkers()
     {
         foreach (var marker in spawnedMarkers)

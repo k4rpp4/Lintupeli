@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(xargs grep *)",
+      "Bash(find \"C:\\\\Users\\\\kkmar\\\\CodeProjects\\\\Lintupeli\" -name \"*.meta\" -exec grep -l \"d4ea6a0a3bc325444a4f332171438fcd\" {} \\\\;)",
+      "Bash(find C:/Users/kkmar/CodeProjects/Lintupeli/Lintupeli/Library/PackageCache/com.meta.xr.sdk.interaction@33d664ec3528/Runtime/Scripts/Interaction/Models/Ray/RayInteractor.cs.meta -exec cat {} \\\\;)",
+      "Bash(python3 *)",
+      "Bash(cmd *)",
+      "Bash(sed -n '2749,2760p' \"C:/Users/kkmar/CodeProjects/Lintupeli/Lintupeli/Library/PackageCache/com.meta.xr.sdk.core@d6da9ab40659/Samples~/Scenes/VirtualKeyboard.unity\")",
+      "Bash(sed -n '4370,4385p' \"C:/Users/kkmar/CodeProjects/Lintupeli/Lintupeli/Library/PackageCache/com.meta.xr.sdk.core@d6da9ab40659/Samples~/Scenes/VirtualKeyboard.unity\")",
+      "Bash(awk '{print $3}')",
+      "Bash(awk '{print $2}')",
+      "Bash(grep -v \"^Binary\\\\|value:\\\\|m_Name:  *$\")",
+      "Bash(grep -l \"126d619cf4daa52469682f85c1378b4a\" \"C:/Users/kkmar/CodeProjects/Lintupeli/Lintupeli/Assets/\"*)",
+      "Bash(grep -n -A 5 '^--- .*&__TRACKED_VAR__$' C:/Users/kkmar/CodeProjects/Lintupeli/Lintupeli/Assets/Scenes/FlockScene.unity)",
+      "Bash(awk -F: '{print NR\": \"$0}')",
+      "Bash(python *)",
+      "Bash(powershell *)",
+      "Read(//c/Users/kkmar/Downloads/**)",
+      "Read(//c/Users/kkmar/**)",
+      "Bash(awk *)"
+    ]
+  }
+}

@@ -86,6 +86,8 @@ public class FlockCheckpointController : MonoBehaviour
             var renderer = activeCheckpointIndicator.GetComponent<Renderer>();
             renderer.material = checkpointMaterial;
         }
+
+        activeCheckpointIndicator.SetActive(false);
     }
 
     void Update()
@@ -143,6 +145,7 @@ public class FlockCheckpointController : MonoBehaviour
     // or on the save/naming screen afterward), long before "Aloita" was
     // ever pressed.
     private bool gameplayActive = false;
+    public bool IsGameplayActive => gameplayActive;
 
     // Wire to whatever actually starts gameplay (e.g. the "Aloita" button),
     // so the arrows/indicator only appear once the player is flying, not

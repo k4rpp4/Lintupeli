@@ -11,8 +11,17 @@ public class RouteSaveMenu : MonoBehaviour
     [Header("Resumed when this menu closes (Confirm or Cancel)")]
     public GameObject rayCheckpointPlacer;
 
-    [Header("Hidden when this menu closes")]
-    public GameObject keyboardGo;
+    void Start()
+    {
+        if (nameInputField != null)
+            nameInputField.onSubmit.AddListener(_ => ConfirmSave());
+    }
+
+    public void Open()
+    {
+        if (panelRoot != null)
+            panelRoot.SetActive(true);
+    }
 
     public void ConfirmSave()
     {
@@ -24,9 +33,19 @@ public class RouteSaveMenu : MonoBehaviour
         checkpointController.saveFileName = routeName + ".json";
         checkpointController.SaveCheckpoints();
 
-        Close();
+        // Just hide the panel — navigation to StartMenu is handled by the
+        // scene-wired GameObjectActivatorUI.ActivateAll() call on the button.
+        // We deliberately do NOT re-enable the RayCheckpointPlacer here so
+        // that the preview balls remain visible when the player returns to the
+        // main menu.
+        if (nameInputField != null)
+            nameInputField.text = "";
+
+        if (panelRoot != null)
+            panelRoot.SetActive(false);
     }
 
+    // Called by the Cancel (Peruuta) button — returns to ray placement mode.
     public void Close()
     {
         if (nameInputField != null)
@@ -34,9 +53,6 @@ public class RouteSaveMenu : MonoBehaviour
 
         if (panelRoot != null)
             panelRoot.SetActive(false);
-
-        if (keyboardGo != null)
-            keyboardGo.SetActive(false);
 
         if (rayCheckpointPlacer != null)
         {
