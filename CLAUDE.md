@@ -37,33 +37,49 @@ Tarkoitus: tämä osio riittää sellaisenaan jatkamaan työtä ilman aiempaa ke
   - Molemmat sliderit tallentuvat/latautuvat NYT osana reitin JSON-tiedostoa (`FlockCheckpointController.SaveCheckpoints()`/`LoadCheckpoints()`, kentät `boidSpeed`/`checkpointRadius` `CheckpointData`-luokassa, vanhoille tallennuksille fallback-oletukset 6.0/5.0). Lataus laukaisee uuden `FlockCheckpointController.OnCheckpointsLoaded`-UnityEventin, joka on kytketty `GameplaySettingsUI.RefreshFromCurrentValues()`:iin — sliderit siis hyppäävät ladatun reitin omiin arvoihin sen sijaan että ne jäisivät näyttämään vanhaa asetusta.
   - Huom: nopeus/herkkyys EIVÄT ole erillinen "asetustiedosto" — ne tallentuvat aina yhdessä sen hetkisen REITIN kanssa ("Tallenna"-napista ray-sijoittelussa). Jos käyttäjä haluaa jatkossa reitistä riippumattoman globaalin asetustallennuksen, se pitää rakentaa erikseen.
 
-### Reitin nimeämis-/tallennuspaneelin korjaukset (uusin, EI VIELÄ LASEISSA TESTATTU)
-Käyttäjä raportoi pelattuaan: (1) checkpoint-osoitinpallo näkyi ilmassa jo "Tallenna"-näkymässä ennen kuin peliä oli edes aloitettu, (2) säde ei näkynyt ollenkaan näppäimistöä/nimeämispaneelia käytettäessä (korostus kylläkin toimi), (3) "Tallenna"-nappia ei näkynyt lainkaan eikä Enter tehnyt mitään.
+### Uusimmat muutokset (committoitu fcc89fd, EI vielä testattu laseilla)
 
-**Syyt selvitetty ja korjattu koodissa + scenessä (committoitu, mutta EI vielä buildattu/testattu laseilla):**
-1. `FlockCheckpointController.Update()` päivitti/näytti `activeCheckpointIndicator`-palloa aina kun `computedCheckpoints.Count > 0` — siis heti kun checkpointteja oli sijoitettu sädellä, riippumatta oliko "Aloita" painettu. Lisätty uusi `private bool gameplayActive` -kenttä: `Update()` koko sisältö (myös nuolet/etenemislogiikka) on nyt gatettu tämän taakse, ja se asetetaan `true`:ksi vasta `ShowGuidanceArrows()`:ssä (Aloita-napin kutsuma) ja `false`:ksi `HideGuidanceArrows()`:ssä (myös reitin valmistuttua). `HideGuidanceArrows()` myös piilottaa indikaattoripallon eksplisiittisesti.
-2. **TÄRKEÄ LÖYDÖS, oikaisee aiemman virheellisen oletuksen:** Projektissa EI OLE mitään erillistä "oletus-UI-sädettä" — vahvistettu ettei scenessä ole `ControllerRayVisual`-komponenttia (Meta Interaction SDK:n standardi säteenpiirto) lainkaan. `RayCheckpointPlacer.cs`:n oma `LineRenderer` on ainoa säde koko sovelluksessa. Se piti aiemmin itsensä piilossa aina kun osoitti mitä tahansa UI-elementtiä (`uiRayInteractor.HasCandidate`) olettaen että "UI:n oma säde" näkyisi tilalla — tätä ei koskaan tapahtunut, joten näppäimistöä/nappeja osoittaessa säde vain katosi kokonaan. Poistettu tuo piilotuslogiikka kokonaan; säde näkyy nyt aina kun `RayCheckpointPlacer` on aktiivinen. Lisätty `public bool placementEnabled` -kenttä + `SetPlacementEnabled(bool)`: kun `false`, säde näkyy edelleen (voi tähdätä näppäimistöön/nappeihin) mutta liipaisin ei enää lisää checkpointteja eikä esikatselupalloa näytetä.
-3. Toolbarin "Tallenna"-nappi (`StartMenu/CanvasRoot/SaveButton`) kutsui aiemmin `rayCheckpointPlacer.SetActive(false)` — tämä pysäytti KOKO `RayCheckpointPlacer`-komponentin `Update()`:n, eli poisti ainoan säteen kokonaan nimeämisen ajaksi (syy kohtaan #2 liittyvälle oireelle). Muutettu kutsumaan sen sijaan `RayCheckpointPlacer.SetPlacementEnabled(false)` (Editor-skriptillä patchattu suoraan scenen UnityEventiin, koska nappi on osa uudelleenkäytettyä `JPETestMenu.prefab`-instanssia).
-4. **Reitin nimeämispaneeli (`RouteNamePanel`) oli kiinteästi päävalikon ("StartMenu") sijainnissa**, kun taas Metan virtuaalinäppäimistö asemoi itsensä automaattisesti sinne minne pelaaja SILLÄ HETKELLÄ katsoo (`OVRPlugin.SuggestVirtualKeyboardLocation`). Jos pelaaja on kävellyt/kääntynyt sen jälkeen kun päävalikko avattiin, nimeämispaneeli ja näppäimistö voivat päätyä kauas toisistaan — "Tallenna"-nappi näyttäisi olevan "kadonnut" vaikka se onkin olemassa, vain mahdollisesti pelaajan selän takana tms. **HUOM: skaalaus EI ollut ongelma** — tarkka mittaus (`lossyScale`) osoitti sekä `StartMenu`:n että `RouteNamePanel`:n skaalautuvan oikein (~1.0 ja 0.001, ei kertautunutta 0.000001:tä kuten aluksi epäilin). Korjaus: `RouteNamePanel` siirretty `CenterEyeAnchor`:in lapseksi (sama konventio kuin `RayModeUiPanel`:lla), paikallinen sijainti `(0, 0.15, 0.55)`, skaala `0.001` — pysyy siis aina pelaajan edessä kuten näppäimistökin.
-5. `RouteSaveMenu.cs`: lisätty `public GameObject keyboardGo` -kenttä (kytketty `RouteNameVirtualKeyboard`-objektiin), ja `Close()` piilottaa sen nyt eksplisiittisesti — aiemmin näppäimistö saattoi jäädä näkyviin/päälle "Tallenna"/"Peruuta"-napin painamisen jälkeenkin.
+**OVRVirtualKeyboard poistettu, korvattu VRKeyboard.cs:llä:**
+- `OVRVirtualKeyboard`-prefab-instanssi poistettu scenestä kokonaan.
+- `VRKeyboard.cs` (uusi): rakentaa QWERTY+suomi-näppäimistön runtime-aikana `Awake()`-metodissa suoraan `RouteNamePanel`in `CanvasRoot`iin. Sivut: kirjaimet (isot/pienet, caps one-shot) / numerot+erikoismerkit. Ei tarvitse yhtään scene-objektia etukäteen.
+- `RouteSaveMenu.cs` uudelleenkirjoitettu: poistettu `keyboardGo`- ja `headTransform`-kentät, `ConfirmSave()` ei enää aktivoi `RayCheckpointPlacer`ia → reittipallot säilyvät tallennuksen jälkeen näkyvissä.
+- `RouteNamePanel` siirretty `CenterEyeAnchor`in lapseksi, sijainti `(0, 0.15, 0.55)`, skaala `0.001` — pysyy pelaajan edessä kuten `RayModeUiPanel`.
+- Tallenna/Peruuta-napit sijoitettu näppäimistön yläpuolelle (`y=290`).
 
-**EI vielä tehty / seuraava askel:** näitä muutoksia EI ole varmistettu VR:ssä — pitää buildata laseille ja testata koko tallennusvuo uudelleen (sijoita pisteitä → paina Tallenna → tarkista että säde näkyy koko ajan, paneeli+näppäimistö ovat samassa kohtaa toisiinsa nähden, "Tallenna"-nappi näkyy ja toimii, checkpoint-pallo EI näy ennen "Aloita"-painallusta).
+**QuitMenu (pelin keskeytysvalikko):**
+- `QuitMenuController.cs` (uusi, `CheckPointManager`-objektissa): kuuntelee Y (vasen) / B (oikea) -nappeja (`OVRInput.Button.Two`) pelin aikana (`IsGameplayActive`) ja toggleaa QuitMenun.
+- `FlockCheckpointController.IsGameplayActive` (uusi public property) — paljastaa `gameplayActive`-kentän QuitMenuControllerille.
+- QuitMenu on JPETestMenu-prefabin instanssi (PrefabInstance `763095921`), oletuksena inaktiivinen. Stripped GO `763095923` lisätty viittausta varten.
+- `CheckPointManager`-objektissa kaksi `GameObjectActivator`-komponenttia: `1922261334` (targetObject=QuitMenu) toggle-käyttöön, `1922261335` (targetObject=StartMenu) aktivointiin.
+- "Päävalikkoon"-napin onClick: `QuitMenuController.OnReturnToMainMenu()` (kutsuu `HideGuidanceArrows()`+`ResetProgress()`) + `GameObjectActivator.DeactivateObject()` (QuitMenu piiloon) + `GameObjectActivator.ActivateObject()` (StartMenu näkyviin).
+- **VAROITUS:** Unity ylikirjoittaa stripped-GO-viittaukset inaktiivisiin objekteihin tallennettaessa Editorissa. Jos QuitMenu-viittaukset katkeavat, kytkennät pitää tarkistaa Inspectorista `CheckPointManager`-objektin `GameObjectActivator`-komponenteista.
+
+**Sovelluksen nimi ja kuvake:**
+- Nimi: `Lintupeli`, bundle ID: `com.Samk.Lintupeli` (aiempi oli `Lintupeli_dev_4` / `com.Samk.Lintupeli_dev_2`).
+- `Assets/Icons/Lintupeli_kuvake.png` (GUID `d69d2583a0a94a80b377780758089e72`): kaikki Android-kuvakekoot + VR splash (`fileID: 2800000`, Texture2D) + splash background (`fileID: 21300000`, Sprite). Texture meta: `textureType: 8` (Sprite), `spriteMode: 1`.
+- **HUOM vanhat tallennukset:** bundle ID muuttui — `/sdcard/Android/data/com.Samk.Lintupeli_dev_2/files/*.json` eivät siirry automaattisesti uuteen `com.Samk.Lintupeli`-pakettiin.
+
+**ExitButton (aloitusvalikko):**
+- `AppController.cs` (uusi, GUID `47f6b36ce2574ad7a22d2d3619f0e736`): `Quit()` kutsuu `Application.Quit()`.
+- ExitButton (fileID `2015427949`, StartMenun lapsi fileID `640595841`) kytkee `AppController.Quit()`:iin. Toimii vain buildissa, ei Editorissa.
 
 ### Tunnetut puutteet / seuraavat askeleet
-- **"Draw-pattern-Button" ja "Choose-area-Button" ovat yhä toteuttamatta** — `OnClick` sulkee vain valikon. Suunniteltu käyttötarkoitus pitää käydä läpi käyttäjän kanssa samaan tapaan kuin sädesijoittelu (ks. keskusteluhistoria: kysy ensin mitä pelaajan pitäisi tehdä, miten se muuttuu `CheckpointPositions`-listaksi).
-- `OVRVirtualKeyboard`:n `controllerRaycaster`-viittaus (tyyppi `OVRPhysicsRaycaster`) on yhä tyhjä — tarkistettu Metan lähdekoodista (`Library/PackageCache/com.meta.xr.sdk.core.../Scripts/OVRVirtualKeyboard/OVRVirtualKeyboard.cs`) että tämä on VAIN valinnainen lisäsuodatin (`SendVirtualKeyboardRayInput`: jos `raycaster` on null, ohitetaan koko hit-testaus ja inputti menee aina läpi) — ei liity näppäimistön toimintaan tai säteen näkyvyyteen mitenkään, joten tätä EI tarvitse korjata `RouteNamePanel`-bugin yhteydessä. EI kiireellinen.
-- Enter-näppäin virtuaalinäppäimistöllä ei ole kytketty mihinkään ("SubmitOnEnter" tms. ei wiratu `RouteSaveMenu.ConfirmSave()`:iin) — tallennus tapahtuu vain "Tallenna"-nappia painamalla. Tämä on tarkoituksellista nykyisellään, mutta jos käyttäjä haluaa Enterin toimivan pikanäppäimenä, se olisi pieni lisäys (`InputField.onEndEdit` → `ConfirmSave`).
-- `GameplaySettingsControls`-paneelin sijainti päävalikon canvaksella (`anchoredPosition: 0,0`, keskellä) on väliaikainen — käyttäjä aikoi siirtää sen itse editorissa tehtyyn tilaan, ei ole vielä vahvistettu lopulliseksi.
-- Git-repo (`origin` = `git@github.com:k4rpp4/Lintupeli.git`) on ajan tasalla — tarkista silti `git status` ensimmäisenä varmuuden vuoksi.
-- Laseihin (Quest 3, adb-yhteys `2G0YC5ZG4Y01NN`, paketti `com.Samk.Lintupeli_dev_2`) on jo päivitetty kaikki 11 vanhaa tallennettua reittiä (`/sdcard/Android/data/com.Samk.Lintupeli_dev_2/files/*.json`) sisältämään eksplisiittiset `boidSpeed:6.0`/`checkpointRadius:5.0`-kentät. Tätä EI tarvitse tehdä uudelleen ellei tallennusformaatti muutu jälleen.
-- Unity Editorin havaittu tässä sessiossa TOISTUVASTI jäävän reagoimattomaksi Editor-skripteille kunnes ikkuna saa fokuksen (`SetForegroundWindow`/`ShowWindow` PowerShellillä auttoi joka kerta) — jos automatisoitu Editor-skripti ei näytä etenevän parin minuutin jälkeen, kokeile tätä ennen kuin pyydät käyttäjää itse klikkaamaan.
+- **"Draw-pattern-Button" ja "Choose-area-Button" ovat yhä toteuttamatta** — `OnClick` sulkee vain valikon.
+- **QuitMenu-kytkennät saattavat katketa** Editorissa tallennettaessa (ks. VAROITUS yllä). Jos QuitMenu ei aukea Y/B:llä, tarkista `CheckPointManager` > `GameObjectActivator` (1922261334) Inspectorista.
+- **QuitMenu ei vielä testattu laseilla** — rakenne on kunnossa koodissa ja YAML:ssa mutta VR-testi puuttuu.
+- `GameplaySettingsControls`-paneelin sijainti päävalikon canvaksella on väliaikainen — käyttäjä siirtää itse.
+- Git-repo (`origin` = `git@github.com:k4rpp4/Lintupeli.git`) on ajan tasalla commit `fcc89fd`.
+- Quest 3, adb `2G0YC5ZG4Y01NN`. Bundle ID muuttui `com.Samk.Lintupeli_dev_2` → `com.Samk.Lintupeli` — vanhat JSON-tallennukset eivät siirry automaattisesti.
 
 ### Tärkeimmät tiedostot
-- `Assets/Scripts/FlockCheckpointController.cs` — checkpoint-datamalli, pelilogiikka, tallennus/lataus (nyt myös nopeus+herkkyys)
+- `Assets/Scripts/FlockCheckpointController.cs` — checkpoint-datamalli, pelilogiikka, tallennus/lataus, `IsGameplayActive`-property
 - `Assets/Scripts/RayCheckpointPlacer.cs`, `RouteSaveMenu.cs`, `StartButtonAvailability.cs` — ray-sijoittelu ja tallennus-UI
-- `Assets/Scripts/CheckpointProgressHud.cs`, `GameplaySettingsUI.cs` — uusin HUD ja asetusliukusäätimet
+- `Assets/Scripts/CheckpointProgressHud.cs`, `GameplaySettingsUI.cs` — HUD ja asetusliukusäätimet
 - `Assets/Scripts/CheckpointReviewDisplay.cs` — numeroitujen esikatselupallojen piirto
-- `Assets/Scenes/FlockScene.unity` — kaikki UI-kytkennät (paljon käsin muokattua YAML:ia ja Editor-skriptien kautta tehtyjä muutoksia, koska Unity Editor oli usein hidas reagoimaan session aikana — jos jokin kytkentä näyttää mystisesti rikkoutuneen, epäile ensin tätä)
+- `Assets/Scripts/QuitMenuController.cs` — Y/B-nappi toggleaa QuitMenun, `OnReturnToMainMenu()` palauttaa alkutilaan
+- `Assets/Scripts/AppController.cs` — `Quit()` sammuttaa sovelluksen (ExitButton aloitusvalikossa)
+- `Assets/Scripts/VRKeyboard.cs` — runtime-näppäimistö RouteNamePaneelille
+- `Assets/Scenes/FlockScene.unity` — kaikki UI-kytkennät YAML:ssa; jos jokin kytkentä näyttää rikkoutuneen, epäile Unity-serialisointia (erityisesti inaktiiviset objektit kuten QuitMenu)
 
 ## Project Overview
 
